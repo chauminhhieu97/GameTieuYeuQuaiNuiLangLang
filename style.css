@@ -34,6 +34,14 @@
     /* Mobile Performance */
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+    /* Prevent zoom on double-tap */
+    touch-action: manipulation;
+}
+
+html {
+    /* Prevent zoom on iOS */
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
 }
 
 body,
@@ -324,10 +332,9 @@ body::after {
     cursor: pointer;
     z-index: 10;
     pointer-events: auto;
-    /* Override parent's pointer-events: none */
     -webkit-tap-highlight-color: transparent;
-    /* Temporary debug border - remove after testing */
-    /* border: 3px dashed red; */
+    /* Prevent zoom on tap */
+    touch-action: manipulation;
 }
 
 /* Removed empty ruleset */
@@ -503,6 +510,9 @@ body::after {
     transition: all 0.1s ease;
     position: relative;
     overflow: hidden;
+    /* Prevent zoom on tap */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .btn-primary:active,

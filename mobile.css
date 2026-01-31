@@ -2,6 +2,38 @@
    MOBILE RESPONSIVE OPTIMIZATIONS
    ========================================== */
 
+/* Mobile Character Display Fix */
+@media (max-width: 768px) {
+
+    /* Ensure character area is visible and properly positioned */
+    #character-area {
+        width: 220px;
+        height: 220px;
+        bottom: 10%;
+        /* Ensure it's above all backgrounds */
+        z-index: 50 !important;
+        /* Force visibility */
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    #pig-char {
+        width: 180px;
+        height: 180px;
+        /* Ensure character sprite is visible */
+        z-index: 51;
+        position: relative;
+    }
+
+    /* Ensure character classes work */
+    .char-pig,
+    .char-frog,
+    .char-bear {
+        display: block !important;
+        opacity: 1 !important;
+    }
+}
+
 /* Reduce animations on mobile for performance */
 @media (max-width: 768px) {
 
