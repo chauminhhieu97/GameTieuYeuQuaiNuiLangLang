@@ -1,0 +1,161 @@
+/* ==========================================
+   MOBILE RESPONSIVE OPTIMIZATIONS
+   ========================================== */
+
+/* Reduce animations on mobile for performance */
+@media (max-width: 768px) {
+
+    /* Simplify background effects */
+    body::after {
+        opacity: 0.1;
+        /* Lighter paper texture */
+    }
+
+    /* Smaller character for mobile screens */
+    #pig-char {
+        width: 180px;
+        height: 180px;
+    }
+
+    #character-area {
+        width: 220px;
+        height: 220px;
+    }
+
+    /* Optimize scoreboard */
+    #score-board {
+        font-size: 24px;
+        padding: 8px 20px;
+        gap: 10px;
+    }
+
+    #score-board .icon {
+        font-size: 24px;
+    }
+
+    /* Simplify modal */
+    .modal-content {
+        width: 95%;
+        max-width: none;
+    }
+
+    .modal-body {
+        max-height: 50vh;
+        padding: 15px;
+    }
+
+    /* Larger touch targets */
+    .btn-primary,
+    .btn-action,
+    .dock-btn {
+        min-width: 60px;
+        min-height: 60px;
+        padding: 12px;
+    }
+
+    /* Optimize shop items */
+    .shop-item {
+        padding: 10px;
+    }
+
+    .shop-item-icon {
+        font-size: 32px;
+        width: 50px;
+    }
+
+    /* Reduce particle effects */
+    .particle {
+        display: none;
+        /* Disable particles on mobile for performance */
+    }
+
+    /* Simplify dialogue box */
+    #dialogue-box {
+        font-size: 18px;
+        padding: 15px 25px;
+        max-width: 90%;
+    }
+
+    /* Optimize intro screen */
+    .title-main {
+        font-size: 48px;
+    }
+
+    .title-sub {
+        font-size: 24px;
+    }
+
+    #start-game-btn {
+        font-size: 20px;
+        padding: 12px 40px;
+    }
+}
+
+/* Extra small devices (phones in portrait) */
+@media (max-width: 480px) {
+    #pig-char {
+        width: 150px;
+        height: 150px;
+    }
+
+    #character-area {
+        width: 180px;
+        height: 180px;
+    }
+
+    #score-board {
+        font-size: 20px;
+        padding: 6px 15px;
+    }
+
+    .title-main {
+        font-size: 36px;
+        letter-spacing: 3px;
+    }
+
+    .title-sub {
+        font-size: 18px;
+    }
+
+    /* Stack nav dock vertically on very small screens */
+    .nav-dock {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Landscape mode optimization */
+@media (max-height: 600px) and (orientation: landscape) {
+    #character-area {
+        bottom: 5%;
+    }
+
+    .top-bar {
+        top: 10px;
+        left: 10px;
+    }
+
+    .nav-dock {
+        bottom: 10px;
+        right: 10px;
+    }
+
+    #dialogue-box {
+        top: 80px;
+    }
+}
+
+/* Disable expensive effects on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .particle,
+    .shockwave,
+    .sweat-drop {
+        display: none !important;
+    }
+}

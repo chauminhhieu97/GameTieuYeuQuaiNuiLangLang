@@ -1,7 +1,6 @@
 :root {
     --color-text: #3e2723;
     --color-primary: #ffb300;
-    /* Richer amber */
     --color-secondary: #ff6f00;
     --color-wood-light: #d7ccc8;
     --color-wood-med: #8d6e63;
@@ -12,6 +11,18 @@
     --glass-bg: rgba(255, 255, 255, 0.25);
     --glass-border: rgba(255, 255, 255, 0.4);
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+
+    /* Performance Variables */
+    --particle-count: 8;
+    --animation-speed: 1;
+}
+
+/* Mobile Performance Optimization */
+@media (max-width: 768px) {
+    :root {
+        --particle-count: 3;
+        --animation-speed: 0.8;
+    }
 }
 
 * {
@@ -20,6 +31,9 @@
     -webkit-user-drag: none;
     margin: 0;
     padding: 0;
+    /* Mobile Performance */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
 }
 
 body,
@@ -161,16 +175,13 @@ body::after {
     width: 250px;
     height: 250px;
     transition: transform 0.1s;
-    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.4));
 
     background-repeat: no-repeat;
-    background-size: contain;
     background-position: center bottom;
     margin: 0 auto;
-
-    /* Debug helpers - temporary */
-    border: 1px dashed rgba(255, 255, 255, 0.3);
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: transparent;
+    border: none;
+    /* Remove any debug borders */
 }
 
 /* Character Skins */
@@ -178,34 +189,53 @@ body::after {
     background-image: url('assets/pig_sprite_sheet.png');
     display: block;
     background-color: transparent;
-    /* Clean bg */
     border: none;
-    /* Remove debug border */
-    /* Sprite Sheet Logic handled in JS, but set defaults */
-    background-size: 200% 200%;
-    /* Assuming 2x2 grid for 4 poses */
+
+    /* 2x2 Grid Logic */
+    width: 100%;
+    /* Fill container */
+    height: 100%;
+
+    /* 2x2 Grid Logic - Enforced */
+    /* Crop Zoom: Use 220% instead of 200% to cut off edges (numbers) */
+    background-size: 220% 220% !important;
     background-position: 0 0;
-    /* Pose 1: Idle */
+
     background-repeat: no-repeat;
-    image-rendering: pixelated;
-    /* or high-quality for ink style? Ink style prefers smooth but crisp. Let's try standard */
+
+    /* Fix for "White Background" - SVG Magic */
+    /* This calculates alpha based on brightness: White becomes transparent */
+    filter: url(#remove-background) contrast(1.2);
+    mix-blend-mode: normal;
+    /* Reset multiply */
+
+    /* Ensure no background color on self */
+    background-color: transparent !important;
 }
 
 /* Boss Sói */
 .char-wolf {
-    width: 300px;
+    width: 320px;
     /* Taller */
-    height: 350px;
+    height: 380px;
     background-image: url('assets/wolf_boss_sprite_sheet.png');
-    background-size: 300% 100%;
-    /* Assuming 3 poses side-by-side */
+
+    /* Assuming 3 poses horizontal */
+    /* Crop Zoom: Use 320% width to cut off edges */
+    background-size: 320% 105% !important;
     background-position: 0 0;
+
     position: absolute;
-    right: 10%;
-    bottom: 12%;
+    right: 5%;
+    bottom: 10%;
     z-index: 90;
     display: none;
     /* Hidden by default */
+
+    /* White BG Removal */
+    filter: url(#remove-background) contrast(1.2);
+    mix-blend-mode: normal;
+    background-color: transparent !important;
 }
 
 .char-wolf.active {
@@ -225,22 +255,38 @@ body::after {
     }
 }
 
+/* Fallback for Frog (Green Pig) */
 .char-frog {
-    background-color: #8bc34a;
-    /* Light Green Fallback */
-    background-image: url('assets/frog_sprite.png');
-    background-size: contain;
-    background-position: center bottom;
+    background-image: url('assets/pig_sprite_sheet.png');
+    /* Reuse Pig Sprite */
+    background-size: 220% 220% !important;
+    background-position: 0 0;
+
+    width: 100%;
+    height: 100%;
+    display: block;
     background-repeat: no-repeat;
+    background-color: transparent !important;
+
+    /* Green Tint + SVG BG Removal */
+    filter: url(#remove-background) hue-rotate(120deg) brightness(0.9);
 }
 
+/* Fallback for Bear (Brown Pig) */
 .char-bear {
-    background-color: #795548;
-    /* Brown Fallback */
-    background-image: url('assets/bear_sprite.png');
-    background-size: contain;
-    background-position: center bottom;
+    background-image: url('assets/pig_sprite_sheet.png');
+    /* Reuse Pig Sprite */
+    background-size: 220% 220% !important;
+    background-position: 0 0;
+
+    width: 100%;
+    height: 100%;
+    display: block;
     background-repeat: no-repeat;
+    background-color: transparent !important;
+
+    /* Brown Tint (Sepia + Rotate) + SVG BG Removal */
+    filter: url(#remove-background) sepia(0.8) hue-rotate(-30deg) contrast(1.2);
 }
 
 .anim-grind {
@@ -309,28 +355,59 @@ body::after {
     /* Align siblings to left */
 }
 
+/* UI Ink Style Overhaul */
 #score-board {
-    background: linear-gradient(to bottom, #5d4037, #4e342e);
-    padding: 12px 32px;
-    border-radius: 12px;
-    /* Less rounded, more plank-like */
-    border: 3px solid #3e2723;
+    /* Bamboo Scroll Look */
+    background: #f4e4bc;
+    /* Rice paper */
+    padding: 10px 40px;
+    border-radius: 4px;
+    border: none;
     position: relative;
-    color: #ffd54f;
-    font-size: 38px;
+    color: #3e2723;
+    /* Ink color */
+    font-size: 32px;
     font-weight: 900;
     display: flex;
     align-items: center;
     gap: 16px;
+
+    /* Irregular Ink Border using box-shadow or border-image (simulated with standard border first for safety) */
+    border: 3px solid #3e2723;
+    outline: 2px dashed #8d6e63;
+    outline-offset: -8px;
+
     box-shadow:
-        0 6px 0 #3e2723,
-        0 15px 20px rgba(0, 0, 0, 0.4),
-        inset 0 2px 5px rgba(255, 255, 255, 0.1);
-    text-shadow:
-        2px 2px 0 #3e2723,
-        0 0 15px rgba(255, 213, 79, 0.5);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.05) 0px, rgba(0, 0, 0, 0.05) 2px, transparent 2px, transparent 4px);
+        5px 5px 0 rgba(62, 39, 35, 0.2),
+        0 0 10px rgba(0, 0, 0, 0.1);
+
+    /* Paper Texture */
+    background-image:
+        linear-gradient(90deg, transparent 50%, rgba(0, 0, 0, 0.02) 50%),
+        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(139, 69, 19, 0.1) 20px);
+    background-size: 20px 20px;
+}
+
+/* Scroll Ends */
+#score-board::before,
+#score-board::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 120%;
+    top: -10%;
+    background: #3e2723;
+    /* Dark Wood */
+    border-radius: 4px;
+    box-shadow: inset 2px 0 5px rgba(255, 255, 255, 0.2);
+}
+
+#score-board::before {
+    left: -10px;
+}
+
+#score-board::after {
+    right: -10px;
 }
 
 /* Bolts on the sign */
@@ -666,18 +743,26 @@ body::after {
 }
 
 .modal-content {
-    background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+    /* Ink Scroll Style */
+    background: #f4e4bc;
+    /* Rice paper */
     padding: 0;
-    /* Reset for header layout */
-    border-radius: 20px;
+    border-radius: 8px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    border: 4px solid #fff;
+    box-shadow:
+        0 0 0 3px #3e2723,
+        5px 5px 0 rgba(62, 39, 35, 0.3),
+        0 20px 40px rgba(0, 0, 0, 0.4);
+    border: 2px solid #8d6e63;
     transform: scale(0.8);
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative;
     overflow: hidden;
+
+    /* Paper texture */
+    background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(139, 69, 19, 0.05) 20px);
 }
 
 .modal:not(.hidden) .modal-content {
@@ -685,13 +770,17 @@ body::after {
 }
 
 .modal-header {
-    background: #5d4037;
+    background: #3e2723;
+    /* Dark ink */
     padding: 20px;
-    color: #fff;
+    color: #f4e4bc;
+    /* Paper color text */
     font-size: 24px;
     text-transform: uppercase;
     font-weight: bold;
-    border-bottom: 4px solid #3e2723;
+    border-bottom: 3px double #8d6e63;
+    text-align: center;
+    letter-spacing: 2px;
 }
 
 .modal-body {
@@ -2130,19 +2219,22 @@ body.frenzy-mode #pig-char {
 .shop-item {
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.5);
-    border: 2px solid #8d6e63;
-    border-radius: 12px;
-    padding: 10px;
+    background: #fff8e1;
+    /* Light yellow paper */
+    border-bottom: 2px solid #3e2723;
+    /* Simple ink line separator */
+    border-radius: 0;
+    padding: 15px;
     transition: all 0.2s;
     position: relative;
     overflow: hidden;
+    margin-bottom: 5px;
 }
 
 .shop-item:hover {
-    background: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    transform: translateX(5px);
+    box-shadow: -2px 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .shop-item.locked {
@@ -2177,19 +2269,35 @@ body.frenzy-mode #pig-char {
 }
 
 .shop-item-cost {
-    background: #5d4037;
-    color: #fff;
-    padding: 8px 15px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 14px;
+    background: transparent;
+    color: #bf360c;
+    /* Red Ink */
+    border: 2px solid #bf360c;
+    border-radius: 50%;
+    /* Stylized Seal */
+    width: 60px;
+    height: 60px;
     display: flex;
     align-items: center;
-    gap: 5px;
-    cursor: pointer;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    transform: rotate(-10deg);
     transition: all 0.2s;
-    border: 2px solid transparent;
+    box-shadow: 0 0 0 2px #fff8e1 inset;
+    /* Double stroke feel */
 }
+
+/* Purchased State */
+.shop-item-cost.owned {
+    background: #8d6e63;
+    border-color: #5d4037;
+    color: #fff;
+    transform: rotate(0deg);
+    border-radius: 4px;
+}
+
+/* Cleanup stray code */
 
 .shop-item-cost:hover {
     background: #795548;

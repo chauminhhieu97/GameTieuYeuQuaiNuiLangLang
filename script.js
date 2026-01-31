@@ -33,8 +33,16 @@ const state = {
     meetingScore: 0,
     meetingMaxNotes: 10,
     meetingNotesSpawned: 0,
-    inputBuffer: false // Prevent spamming
+    inputBuffer: false, // Prevent spamming
+    // Performance
+    isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+    particleMultiplier: 1
 };
+
+// Adjust performance based on device
+if (state.isMobile) {
+    state.particleMultiplier = 0.3; // Reduce particles to 30% on mobile
+}
 
 // Config
 const DAY_CYCLE_DURATION = 15000; // Slower day cycle
@@ -374,6 +382,7 @@ function updateUI() {
 }
 
 // Sprite Animation System (24fps Standard)
+// Sprite Animation System V2 (Row-based Sequential)
 class SpriteAnimator {
     constructor(elementId, config = {}) {
         this.el = document.getElementById(elementId);
@@ -381,99 +390,146 @@ class SpriteAnimator {
         this.frameInterval = 1000 / this.fps;
         this.lastTime = 0;
 
-        // Grid Config
-        this.cols = config.cols || 2;
-        this.rows = config.rows || 2;
+        // Dimensions
+        // Assumes uniform grid cells. 
+        // cols: Max frames across (for width calculation)
+        // rows: Total states down (for height calculation)
+        this.cols = config.cols || 1;
+        this.rows = config.rows || 1;
 
-        // State Mapping (Row Index)
-        this.states = config.states || {
-            'idle': 0,
-            'action': 1,
-            'sleep': 2,
-            'panic': 3
-        };
+        // State Config: { 'name': { row: 0, frames: 8, loop: true } }
+        this.states = config.states || {};
 
         this.currentState = 'idle';
         this.currentFrame = 0;
         this.isPlaying = true;
 
+        // Set initial style
+        this.updateBackgroundSize();
+
         // Start Loop
         requestAnimationFrame(this.animate.bind(this));
     }
 
+    updateBackgroundSize() {
+        if (!this.el) return;
+        // background-size: (cols * 100)% (rows * 100)%
+        // Example: 12 cols -> 1200%, 3 rows -> 300%
+        // This ensures 1 frame = 100% of container width/height
+        this.el.style.backgroundSize = `${this.cols * 100}% ${this.rows * 100}%`;
+    }
+
     setState(stateName) {
-        if (this.states[stateName] !== undefined && this.currentState !== stateName) {
+        if (this.states[stateName] && this.currentState !== stateName) {
             this.currentState = stateName;
-            this.currentFrame = 0; // Reset frame logic if needed
+            this.currentFrame = 0;
         }
     }
 
     animate(time) {
         requestAnimationFrame(this.animate.bind(this));
 
-        if (!this.isPlaying) return;
+        if (!this.isPlaying || !this.el) return;
 
         const delta = time - this.lastTime;
         if (delta > this.frameInterval) {
             this.lastTime = time - (delta % this.frameInterval);
 
-            // Jitter for 24fps ink-wash feel
-            // If we only have 1 frame per state (which we do currently), 
-            // we simulate "Boiling" (Ink boil) by slightly shifting context.
-            // But if we had frames, we would cycle them.
+            const stateData = this.states[this.currentState];
+            if (!stateData) return;
 
-            // Assuming 2x2 grid for now based on generation
-            // If the user provided image is 2x2:
-            // Frame 0: 0,0 (Idle)
-            // Frame 1: 1,0 (Grind)
-            // Frame 2: 0,1 (Sleep)
-            // Frame 3: 1,1 (Panic)
+            // Calculate Positions
+            const row = stateData.row;
+            // Support colOffset to start at a specific column
+            const startCol = stateData.colOffset || 0;
+            const frame = this.currentFrame + startCol;
 
-            // Since we treat them as STATES, not frames of one animation:
-            // We lock to the specific cell.
+            // Percentage positions
+            // X: frame / (cols - 1) * 100
+            // Y: row / (rows - 1) * 100
+            // Note: If cols=1, div by 0 check needed, but cols always >=1 for sprite sheets
 
-            // Map state to cell index (0-3)
-            const stateIdx = this.states[this.currentState];
-
-            // Calculate col/row
-            const col = stateIdx % this.cols;
-            const row = Math.floor(stateIdx / this.cols);
-
-            // Background Position
-            const xPos = col * (100 / (this.cols - 1));
-            const yPos = row * (100 / (this.rows - 1));
+            const xPos = this.cols > 1 ? frame * (100 / (this.cols - 1)) : 0;
+            const yPos = this.rows > 1 ? row * (100 / (this.rows - 1)) : 0;
 
             this.el.style.backgroundPosition = `${xPos}% ${yPos}%`;
 
-            // Ink Boil Effect (Subtle distortion every frame)
-            // This is the "Code generated 24fps feel" for static assets
+            // Ink Boil (Jitter) - Preserved for 24fps feel on static images
             const boilX = (Math.random() - 0.5) * 2;
             const boilY = (Math.random() - 0.5) * 2;
             this.el.style.transform = `translate(${boilX}px, ${boilY}px)`;
+
+            // Advance Frame
+            this.currentFrame++;
+            if (this.currentFrame >= stateData.frames) {
+                if (stateData.loop !== false) {
+                    this.currentFrame = 0;
+                } else {
+                    this.currentFrame = stateData.frames - 1; // Hold last frame
+                }
+            }
         }
     }
 
-    // Helper to trigger temporary action state
-    triggerAction(actionState, duration = 300) {
+    triggerAction(actionState, duration = null) {
         const previous = this.currentState;
         this.setState(actionState);
-        setTimeout(() => {
-            this.setState(previous);
-        }, duration);
+
+        // If duration is null, rely on animation end (not easily detected in this loop without callback)
+        // So we stick to duration or manually switch back
+        if (duration) {
+            setTimeout(() => {
+                this.setState(previous);
+            }, duration);
+        }
     }
 }
 
 // Initialize Animators
+// Pig Configuration:
+// Row 1 (Index 0): Idle (8 frames)
+// Row 2 (Index 1): Grind/Work (12 frames)
+// Row 3 (Index 2): Panic (8 frames)
+// Max Cols = 12
+// Pig Configuration V3 (Static Grid Fix)
+// 2x2 Grid:
+// [0,0 Idle] [0,1 Grind]
+// [1,0 Sleep] [1,1 Panic]
 const pigAnimator = new SpriteAnimator('pig-char', {
-    cols: 2, rows: 2, // Assuming 2x2 grid for the 4 poses
-    fps: 12, // Lower FPS for "Boiling" effect
-    states: { 'idle': 0, 'grind': 1, 'sleep': 2, 'panic': 3 }
+    cols: 2,
+    rows: 2,
+    fps: 12, // 12fps jitter
+    states: {
+        'idle': { row: 0, colOffset: 0, frames: 1 },  // STATIC Pose 1
+        'grind': { row: 0, colOffset: 1, frames: 1 }, // STATIC Pose 2
+        'action': { row: 0, colOffset: 1, frames: 1 },
+        'sleep': { row: 1, colOffset: 0, frames: 1 }, // STATIC Pose 3
+        'panic': { row: 1, colOffset: 1, frames: 1 }  // STATIC Pose 4
+    }
 });
 
+/*
+// FUTURE CONFIG (When you have the generated 12-col sprite)
+const pigAnimator_FUTURE = new SpriteAnimator('pig-char', {
+    cols: 12,
+    rows: 3,
+    fps: 24,
+    states: { 
+        'idle': { row: 0, frames: 8 },
+        'grind': { row: 1, frames: 12 },
+        'panic': { row: 2, frames: 8 }
+    }
+});
+*/
+
 const wolfAnimator = new SpriteAnimator('wolf-char', {
-    cols: 3, rows: 1, // Assuming 3 poses horizontal
+    cols: 3, rows: 1,
     fps: 8,
-    states: { 'idle': 0, 'shout': 1, 'point': 2 }
+    states: {
+        'idle': { row: 0, frames: 1 },
+        'shout': { row: 0, frames: 3 }, // Cycle through all 3 distinct poses as if animation
+        'point': { row: 0, frames: 1 }
+    }
 });
 
 function animatePig() {
@@ -540,10 +596,9 @@ function spawnFeedback(x, y, amount, isCrit, isAuto = false) {
 
     if (isAuto) {
         text.style.fontSize = '20px';
-        text.style.opacity = 0.7; // Make auto text subtler
+        text.style.opacity = 0.7;
     }
 
-    // Position (randomize slightly)
     const offsetX = (Math.random() - 0.5) * 40;
     text.style.left = `${x + offsetX}px`;
     text.style.top = `${y - 50}px`;
@@ -551,17 +606,20 @@ function spawnFeedback(x, y, amount, isCrit, isAuto = false) {
     els.feedback.appendChild(text);
     setTimeout(() => text.remove(), 1000);
 
-    // Spark particles
-    const particleCount = isCrit ? 20 : 8; // More particles
+    // Spark particles - Reduced on mobile
+    const baseCount = isCrit ? 20 : 8;
+    const particleCount = Math.floor(baseCount * state.particleMultiplier);
+
+    // Skip particles entirely on mobile if too many
+    if (state.isMobile && particleCount < 2) return;
+
     for (let i = 0; i < particleCount; i++) {
         const spark = document.createElement('div');
-        // Randomize types: star, spark, chip (new)
         const types = ['star', 'spark', 'chip'];
         const type = isCrit ? 'star' : types[Math.floor(Math.random() * types.length)];
 
         spark.className = `particle ${type}`;
 
-        // Physics variables used by CSS
         const angle = Math.random() * 360;
         const velocity = 50 + Math.random() * 100;
         const tx = Math.cos(angle * Math.PI / 180) * velocity;
@@ -569,7 +627,7 @@ function spawnFeedback(x, y, amount, isCrit, isAuto = false) {
 
         spark.style.setProperty('--tx', `${tx}px`);
         spark.style.setProperty('--ty', `${ty}px`);
-        spark.style.setProperty('--rot', `${Math.random() * 720 - 360}deg`); // Spin!
+        spark.style.setProperty('--rot', `${Math.random() * 720 - 360}deg`);
 
         spark.style.left = `${x}px`;
         spark.style.top = `${y}px`;
@@ -580,8 +638,8 @@ function spawnFeedback(x, y, amount, isCrit, isAuto = false) {
         setTimeout(() => spark.remove(), 800);
     }
 
-    // Sweat (Random chance or high combo)
-    if (Math.random() < 0.15) {
+    // Sweat (Random chance) - Skip on mobile
+    if (!state.isMobile && Math.random() < 0.15) {
         spawnSweat();
     }
 }
@@ -992,12 +1050,17 @@ function selectCharacter(key) {
     state.activeCharacter = key;
 
     // Update visual by class
-    els.pig.className = ''; // clear all
-    els.pig.classList.add(`char-${key}`);
+    const pigEl = document.getElementById('pig-char');
+    if (!pigEl) return;
 
-    // Animation reset
-    els.pig.classList.remove('anim-grind');
-    void els.pig.offsetWidth;
+    // Clear all character classes
+    pigEl.className = '';
+
+    // Add the new character class
+    pigEl.classList.add(`char-${key}`);
+
+    // Force style recalculation
+    void pigEl.offsetWidth;
 
     // Audio cue
     playSound('fanfare');
@@ -1005,6 +1068,8 @@ function selectCharacter(key) {
     // Re-render shop to show "Active" state
     renderShop('recruit');
     updateUI();
+
+    console.log(`Switched to character: ${key}, class: char-${key}`);
 }
 
 
@@ -1594,6 +1659,28 @@ function endMeeting() {
         playSound('ui');
     }
     updateUI();
+}
+
+// Intro Logic
+const introScreen = document.getElementById('intro-screen');
+const startBtn = document.getElementById('start-game-btn');
+
+if (startBtn && introScreen) {
+    startBtn.addEventListener('click', () => {
+        // Init Audio Context on user gesture
+        if (AudioMixer.ctx.state === 'suspended') {
+            AudioMixer.ctx.resume();
+        }
+
+        playSound('fanfare'); // Gong sound sim
+
+        introScreen.classList.add('fade-out');
+
+        // Remove after transition
+        setTimeout(() => {
+            introScreen.style.display = 'none';
+        }, 1500);
+    });
 }
 
 // Event Listeners for Rhythm
