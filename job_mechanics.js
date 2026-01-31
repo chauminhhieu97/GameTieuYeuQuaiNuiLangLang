@@ -188,18 +188,41 @@ const JobMechanics = {
             ctx.translate(pos.x, pos.y);
             ctx.rotate(angle);
 
-            // Ink Style Drawing
-            ctx.fillStyle = '#5d4037';
-            ctx.fillRect(-60, -5, 120, 10);
+            // Ink Style Drawing - Arrow
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
 
-            // Tip
+            // Shaft
+            ctx.fillStyle = '#4e342e'; // Dark Wood
+            ctx.fillRect(-60, -5, 110, 10);
+
+            // Texture Lines on Shaft
+            ctx.strokeStyle = '#3e2723';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(60, -5);
-            ctx.lineTo(80, 0);
-            ctx.lineTo(60, 5);
+            ctx.moveTo(-50, -2); ctx.lineTo(40, -2);
+            ctx.moveTo(-50, 2); ctx.lineTo(40, 2);
+            ctx.stroke();
+
+            // Metal Tip (Shiny)
+            ctx.beginPath();
+            ctx.moveTo(50, -5);
+            ctx.lineTo(80, 0); // Point
+            ctx.lineTo(50, 5);
             ctx.closePath();
-            ctx.fillStyle = '#b0bec5'; // Metal tip
+            ctx.fillStyle = '#cfd8dc'; // Base silver
             ctx.fill();
+            ctx.strokeStyle = '#263238'; // Dark Outline for tip
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Shine on tip
+            ctx.beginPath();
+            ctx.moveTo(55, -2);
+            ctx.lineTo(70, 0);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
 
             ctx.restore();
 
@@ -272,41 +295,60 @@ const JobMechanics = {
             this.temperature -= this.decayRate;
             if (this.temperature < 0) this.temperature = 0;
 
-            // UI: Draw Temp Bar Overlay
-            const w = 20;
-            const h = 200;
-            const x = JobMechanics.canvas.width - 40;
-            const y = JobMechanics.canvas.height / 2 - 100;
+            // UI: Draw Temp Bar Overlay (Ink Scroll Style)
+            const w = 24;
+            const h = 220;
+            const x = JobMechanics.canvas.width - 50;
+            const y = JobMechanics.canvas.height / 2 - 110;
 
-            // Container
+            // Container (Rice Paper Scroll)
+            ctx.fillStyle = '#fffdf0';
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(x, y, w, h);
+            ctx.shadowBlur = 0;
+
             ctx.strokeStyle = '#3e2723';
             ctx.lineWidth = 3;
             ctx.strokeRect(x, y, w, h);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.fillRect(x, y, w, h);
 
-            // Target Zone
+            // Target Zone (Green Ink Wash)
             const zoneTop = y + h - (this.targetZone[1] / 100) * h;
             const zoneHeight = ((this.targetZone[1] - this.targetZone[0]) / 100) * h;
-            ctx.fillStyle = 'rgba(76, 175, 80, 0.3)';
-            ctx.fillRect(x, zoneTop, w, zoneHeight);
+            ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
+            ctx.fillRect(x + 2, zoneTop, w - 4, zoneHeight);
 
-            // Bar
+            // Mark Zone Lines
+            ctx.beginPath();
+            ctx.moveTo(x - 5, zoneTop); ctx.lineTo(x + w + 5, zoneTop);
+            ctx.moveTo(x - 5, zoneTop + zoneHeight); ctx.lineTo(x + w + 5, zoneTop + zoneHeight);
+            ctx.strokeStyle = '#1b5e20';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Bar (Flame Liquid)
             const barHeight = (this.temperature / 100) * h;
             const barTop = y + h - barHeight;
 
             // Color based on zone
-            let color = '#ff9800';
+            let color = '#ff9800'; // Normal
             if (this.temperature < this.targetZone[0]) color = '#2196f3'; // Cold
-            else if (this.temperature > this.targetZone[1]) color = '#f44336'; // Hot
+            else if (this.temperature > this.targetZone[1]) color = '#d32f2f'; // Overheat
             else {
-                color = '#4caf50'; // Perfect
-                state.arrows += 0.2; // Passive gain if perfect
+                color = '#43a047'; // Perfect
+                state.arrows += 0.2;
                 updateUI();
             }
 
             ctx.fillStyle = color;
-            ctx.fillRect(x, barTop, w, barHeight);
+            ctx.fillRect(x + 4, barTop, w - 8, barHeight);
+
+            // Draw "Thermometer Bulb" at bottom
+            ctx.beginPath();
+            ctx.arc(x + w / 2, y + h + 10, 16, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.stroke();
 
             // Particles
             for (let i = this.smokeParticles.length - 1; i >= 0; i--) {
@@ -454,15 +496,25 @@ const JobMechanics = {
                 ctx.rotate(b.angle);
 
                 if (b.label === 'log') {
-                    ctx.fillStyle = '#795548';
+                    // Log Body
+                    ctx.fillStyle = '#5d4037';
                     ctx.fillRect(-20, -40, 40, 80);
-                    // Bark texture
+
+                    // Bark Texture Lines
                     ctx.strokeStyle = '#3e2723';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(-20, -40, 40, 80);
+
+                    ctx.beginPath();
+                    ctx.moveTo(-10, -30); ctx.lineTo(-10, 30);
+                    ctx.moveTo(10, -20); ctx.lineTo(10, 20);
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
                 } else if (b.label === 'chip') {
                     ctx.fillStyle = '#a1887f';
                     ctx.fillRect(-10, -20, 20, 40);
+                    ctx.strokeRect(-10, -20, 20, 40);
                 } else if (b.label === 'axe') {
                     // Debug axe
                     // ctx.fillStyle = 'red';
