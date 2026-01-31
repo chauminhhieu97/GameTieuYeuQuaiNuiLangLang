@@ -373,11 +373,120 @@ function updateUI() {
     }
 }
 
+// Sprite Animation System (24fps Standard)
+class SpriteAnimator {
+    constructor(elementId, config = {}) {
+        this.el = document.getElementById(elementId);
+        this.fps = config.fps || 24;
+        this.frameInterval = 1000 / this.fps;
+        this.lastTime = 0;
+
+        // Grid Config
+        this.cols = config.cols || 2;
+        this.rows = config.rows || 2;
+
+        // State Mapping (Row Index)
+        this.states = config.states || {
+            'idle': 0,
+            'action': 1,
+            'sleep': 2,
+            'panic': 3
+        };
+
+        this.currentState = 'idle';
+        this.currentFrame = 0;
+        this.isPlaying = true;
+
+        // Start Loop
+        requestAnimationFrame(this.animate.bind(this));
+    }
+
+    setState(stateName) {
+        if (this.states[stateName] !== undefined && this.currentState !== stateName) {
+            this.currentState = stateName;
+            this.currentFrame = 0; // Reset frame logic if needed
+        }
+    }
+
+    animate(time) {
+        requestAnimationFrame(this.animate.bind(this));
+
+        if (!this.isPlaying) return;
+
+        const delta = time - this.lastTime;
+        if (delta > this.frameInterval) {
+            this.lastTime = time - (delta % this.frameInterval);
+
+            // Jitter for 24fps ink-wash feel
+            // If we only have 1 frame per state (which we do currently), 
+            // we simulate "Boiling" (Ink boil) by slightly shifting context.
+            // But if we had frames, we would cycle them.
+
+            // Assuming 2x2 grid for now based on generation
+            // If the user provided image is 2x2:
+            // Frame 0: 0,0 (Idle)
+            // Frame 1: 1,0 (Grind)
+            // Frame 2: 0,1 (Sleep)
+            // Frame 3: 1,1 (Panic)
+
+            // Since we treat them as STATES, not frames of one animation:
+            // We lock to the specific cell.
+
+            // Map state to cell index (0-3)
+            const stateIdx = this.states[this.currentState];
+
+            // Calculate col/row
+            const col = stateIdx % this.cols;
+            const row = Math.floor(stateIdx / this.cols);
+
+            // Background Position
+            const xPos = col * (100 / (this.cols - 1));
+            const yPos = row * (100 / (this.rows - 1));
+
+            this.el.style.backgroundPosition = `${xPos}% ${yPos}%`;
+
+            // Ink Boil Effect (Subtle distortion every frame)
+            // This is the "Code generated 24fps feel" for static assets
+            const boilX = (Math.random() - 0.5) * 2;
+            const boilY = (Math.random() - 0.5) * 2;
+            this.el.style.transform = `translate(${boilX}px, ${boilY}px)`;
+        }
+    }
+
+    // Helper to trigger temporary action state
+    triggerAction(actionState, duration = 300) {
+        const previous = this.currentState;
+        this.setState(actionState);
+        setTimeout(() => {
+            this.setState(previous);
+        }, duration);
+    }
+}
+
+// Initialize Animators
+const pigAnimator = new SpriteAnimator('pig-char', {
+    cols: 2, rows: 2, // Assuming 2x2 grid for the 4 poses
+    fps: 12, // Lower FPS for "Boiling" effect
+    states: { 'idle': 0, 'grind': 1, 'sleep': 2, 'panic': 3 }
+});
+
+const wolfAnimator = new SpriteAnimator('wolf-char', {
+    cols: 3, rows: 1, // Assuming 3 poses horizontal
+    fps: 8,
+    states: { 'idle': 0, 'shout': 1, 'point': 2 }
+});
+
 function animatePig() {
-    // Reset animation
-    els.pig.classList.remove('anim-grind');
-    void els.pig.offsetWidth;
-    els.pig.classList.add('anim-grind');
+    // Trigger grind state
+    if (typeof pigAnimator !== 'undefined') pigAnimator.triggerAction('grind', 200);
+
+    // Squash & Stretch (Wrapper)
+    const wrapper = document.getElementById('character-wrapper');
+    if (wrapper) {
+        wrapper.classList.remove('squash-active');
+        void wrapper.offsetWidth;
+        wrapper.classList.add('squash-active');
+    }
 }
 
 function spawnShockwave(x, y) {
@@ -501,54 +610,94 @@ function spawnSweat() {
 // Audio System (Synthesized - No files needed)
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-const SoundFX = {
-    playTone: (freq, type, duration, vol = 0.1) => {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+// Audio System (Sonic Branding & Mixer)
+const AudioMixer = {
+    ctx: new (window.AudioContext || window.webkitAudioContext)(),
+    channels: {},
 
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    init: function () {
+        this.channels['pig'] = this.ctx.createGain();
+        this.channels['wolf'] = this.ctx.createGain();
+        this.channels['sfx'] = this.ctx.createGain();
+        this.channels['bgm'] = this.ctx.createGain();
 
-        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        // Routing
+        this.channels['pig'].connect(this.ctx.destination);
+        this.channels['wolf'].connect(this.ctx.destination);
+        this.channels['sfx'].connect(this.ctx.destination);
+
+        // Volume Mix
+        this.channels['pig'].gain.value = 1.0;
+        this.channels['wolf'].gain.value = 1.2; // Loud warning
+        this.channels['sfx'].gain.value = 0.8;
+    },
+
+    play: function (key, channel = 'sfx', pitch = 1.0) {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        // In a real app, we would load .wav files here.
+        // Since we are ensuring the generic logic works without files,
+        // we will generate "Sonic Branding" synthetically if file not found (simulated).
+        this.playSynthetic(key, channel, pitch);
+    },
+
+    playSynthetic: function (key, channel, pitch) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        // Branding Logic
+        if (channel === 'pig') {
+            osc.type = 'triangle'; // Smooth, naive
+            pitch *= 1.2; // High pitch for Pig
+        } else if (channel === 'wolf') {
+            osc.type = 'sawtooth'; // Rough, aggressive
+            pitch *= 0.5; // Deep bass for Wolf
+        } else {
+            osc.type = 'sine';
+        }
+
+        let freq = 0;
+        let duration = 0.1;
+
+        switch (key) {
+            case 'grind': freq = 150; duration = 0.1; break; // Wood sound
+            case 'crit': freq = 800; duration = 0.2; break; // Metal spark
+            case 'pop': freq = 400; duration = 0.05; break; // Bubble
+            case 'shout': freq = 100; duration = 0.4; break; // Wolf shout
+            case 'step': freq = 60; duration = 0.1; break; // Heavy step
+            default: freq = 440;
+        }
+
+        // Apply pitch
+        osc.frequency.setValueAtTime(freq * pitch, this.ctx.currentTime);
+
+        // Envelope for "Inkwash" organic feel (soft attack/decay)
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(this.channels[channel].gain.value, this.ctx.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
 
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(this.ctx.destination);
 
         osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-    },
+        osc.stop(this.ctx.currentTime + duration);
+    }
+};
 
-    grind: () => {
-        // Low thud/scrape
-        SoundFX.playTone(150 + Math.random() * 50, 'sawtooth', 0.1, 0.1);
-        setTimeout(() => SoundFX.playTone(100, 'square', 0.1, 0.05), 50);
-    },
+// Initialize Mixer
+AudioMixer.init();
 
-    crit: () => {
-        // High energy Zap
-        SoundFX.playTone(800, 'square', 0.1, 0.1);
-        setTimeout(() => SoundFX.playTone(1200, 'sawtooth', 0.2, 0.1), 50);
-    },
-
-    coin: () => {
-        // High ding
-        SoundFX.playTone(1200, 'sine', 0.5, 0.05);
-        setTimeout(() => SoundFX.playTone(2000, 'sine', 0.5, 0.02), 50);
-    },
-
-    uiClick: () => {
-        // Soft click
-        SoundFX.playTone(400, 'sine', 0.1, 0.05);
-    },
-
+const SoundFX = {
+    // Adapter for legacy calls
+    grind: () => AudioMixer.play('grind', 'pig'),
+    crit: () => AudioMixer.play('crit', 'pig', 1.5),
+    coin: () => AudioMixer.play('pop', 'sfx'),
+    uiClick: () => AudioMixer.play('pop', 'sfx', 0.8),
     fanfare: () => {
-        // Simple melody
-        const now = audioCtx.currentTime;
-        [523, 659, 783, 1046].forEach((freq, i) => {
-            setTimeout(() => SoundFX.playTone(freq, 'square', 0.3, 0.1), i * 150);
-        });
+        // Simple scale
+        setTimeout(() => AudioMixer.play('pop', 'sfx', 1.0), 0);
+        setTimeout(() => AudioMixer.play('pop', 'sfx', 1.2), 100);
+        setTimeout(() => AudioMixer.play('pop', 'sfx', 1.5), 200);
     }
 };
 
@@ -588,14 +737,25 @@ function showDialogue() {
     els.dialogueText.style.color = isBoss ? '#d32f2f' : '#4e342e';
     els.dialogueBox.classList.remove('hidden');
 
+    // Wolf logic
+    const wolfEl = document.getElementById('wolf-char');
     if (isBoss) {
-        shakeScreen('heavy'); // Boss Sói xuất hiện -> Rung mạnh
-        playSound('grind');   // Or a specific boss sound if available
+        if (wolfEl) wolfEl.classList.add('active');
+        if (typeof wolfAnimator !== 'undefined') {
+            wolfAnimator.setState('shout');
+            AudioMixer.play('shout', 'wolf'); // Sonic Branding
+        }
+        // Shake screen handled in clickGrind usually, but here too
+    } else {
+        // Pig Talk
+        if (typeof pigAnimator !== 'undefined') pigAnimator.triggerAction('action', 500); // reuse action/grind for talk
     }
 
     // Hide after 3s
     setTimeout(() => {
         els.dialogueBox.classList.add('hidden');
+        if (wolfEl) wolfEl.classList.remove('active');
+        if (typeof wolfAnimator !== 'undefined') wolfAnimator.setState('idle');
     }, 3000);
 }
 

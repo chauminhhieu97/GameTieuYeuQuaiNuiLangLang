@@ -31,6 +31,26 @@ html {
     color: var(--color-text);
 }
 
+/* Ink-wash Aesthetic: Rice Paper Overlay */
+body::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+    /* Top level overlay */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
+    background-color: #f4e4bc;
+    /* Aged paper color */
+    background-blend-mode: multiply;
+    opacity: 0.2;
+    /* Subtle texture */
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
 #game-container {
     position: relative;
     width: 100vw;
@@ -104,8 +124,25 @@ html {
     position: relative;
     width: 100%;
     height: 100%;
-    /* Idle Animation */
-    animation: breathe 4s ease-in-out infinite;
+    /* Idle Animation removed, handled by SpriteAnimator */
+}
+
+.squash-active {
+    animation: squashStretch 0.2s cubic-bezier(0.25, 1.5, 0.5, 1);
+}
+
+@keyframes squashStretch {
+    0% {
+        transform: scale(1);
+    }
+
+    40% {
+        transform: scale(1.1, 0.9) translateY(5px);
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+    }
 }
 
 @keyframes breathe {
@@ -138,15 +175,54 @@ html {
 
 /* Character Skins */
 .char-pig {
-    background-image: url('assets/pig_grinder.png');
+    background-image: url('assets/pig_sprite_sheet.png');
     display: block;
-    background-color: rgba(255, 192, 203, 0.3);
-    /* Pink fallback */
-    border: 2px solid rgba(255, 192, 203, 0.5);
-    /* Debug border */
-    background-position: center bottom;
-    background-size: contain;
+    background-color: transparent;
+    /* Clean bg */
+    border: none;
+    /* Remove debug border */
+    /* Sprite Sheet Logic handled in JS, but set defaults */
+    background-size: 200% 200%;
+    /* Assuming 2x2 grid for 4 poses */
+    background-position: 0 0;
+    /* Pose 1: Idle */
     background-repeat: no-repeat;
+    image-rendering: pixelated;
+    /* or high-quality for ink style? Ink style prefers smooth but crisp. Let's try standard */
+}
+
+/* Boss Sói */
+.char-wolf {
+    width: 300px;
+    /* Taller */
+    height: 350px;
+    background-image: url('assets/wolf_boss_sprite_sheet.png');
+    background-size: 300% 100%;
+    /* Assuming 3 poses side-by-side */
+    background-position: 0 0;
+    position: absolute;
+    right: 10%;
+    bottom: 12%;
+    z-index: 90;
+    display: none;
+    /* Hidden by default */
+}
+
+.char-wolf.active {
+    display: block;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .char-frog {
