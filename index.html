@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiểu Yêu Quái Núi Lãng Lãng</title>
+    <link rel="stylesheet" href="style.css?v=5.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pangolin&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- Sky & Day/Night Cycle -->
+        <div id="sky-layer" class="time-dawn"></div>
+        <!-- God Rays & Vignette -->
+        <div id="lighting-layer"></div>
+
+        <!-- Spirit Layer (Mini-game) -->
+        <div id="spirit-layer"></div>
+
+        <!-- Background -->
+        <div id="mountain-layer">
+            <img src="assets/mountain_bg.png" alt="Lang Lang Mountain">
+        </div>
+
+        <!-- Arrow Pile Logic (Visual) -->
+        <div id="arrow-pile"></div>
+
+        <!-- Main Character Area -->
+        <div id="character-area">
+            <div id="character-wrapper">
+                <!-- Character Sprite Container -->
+                <div id="pig-char" class="char-pig"></div>
+                <div id="sweat-container"></div>
+                <div id="tears-container"></div>
+            </div>
+            <!-- Clickable Area -->
+            <div id="grind-stone-hitbox"></div>
+        </div>
+
+        <!-- UI Layout -->
+        <div id="ui-layer">
+            <div class="top-bar">
+                <div id="score-board">
+                    <span class="icon">🏹</span>
+                    <span id="score">0</span>
+                    <div class="progress-container">
+                        <div id="level-progress"></div>
+                    </div>
+                </div>
+
+                <!-- Combo Display -->
+                <div id="combo-display" class="hidden">
+                    <span id="combo-text">COMBO</span>
+                    <span id="combo-count">0</span>
+                </div>
+
+                <!-- Frenzy Bar (Temperature) -->
+                <div id="frenzy-container">
+                    <div id="frenzy-bar"></div>
+                    <span id="frenzy-label">NHIỆT ĐỘ</span>
+                </div>
+
+                <!-- Stress Bar (Mental Health) -->
+                <div id="stress-container">
+                    <div id="stress-bar"></div>
+                    <span id="stress-label">ÁP LỰC</span>
+                    <span id="stress-icon">🤯</span>
+                </div>
+            </div>
+
+            <div id="dialogue-box" class="hidden">
+                <p id="dialogue-text">...</p>
+            </div>
+
+            <!-- Stress Relief Actions (Left Side) -->
+            <div id="stress-relief-dock">
+                <button id="scream-btn" class="relief-btn" title="Hét vào hố (Giữ để xả stress)">
+                    <span class="icon">🕳️</span>
+                </button>
+                <button id="eat-btn" class="relief-btn" title="Ăn vụng (Giảm stress)">
+                    <span class="icon">🥟</span>
+                </button>
+            </div>
+
+            <!-- RPG HUD Dock -->
+            <div class="nav-dock">
+                <button id="shop-btn" class="dock-btn" data-label="Kho Báu">
+                    <span class="icon">🎁</span>
+                </button>
+                <button id="recruit-btn" class="dock-btn" data-label="Tuyển Dụng">
+                    <span class="icon">🤝</span>
+                </button>
+                <button id="furniture-btn" class="dock-btn" data-label="Tổ Ấm">
+                    <span class="icon">🏠</span>
+                </button>
+                <button id="inventory-btn" class="dock-btn" data-label="Túi Đồ">
+                    <span class="icon">🎒</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Gacha Modal -->
+        <div id="gacha-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <div class="modal-header">
+                    <h2>Kho Báu Bị Tịch Thu</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="gacha-machine">
+                        <p>Tốn <span class="highlight">50 mũi tên</span> để mở rương.</p>
+                        <button id="roll-btn" class="btn-action">Mở Rương!</button>
+                    </div>
+
+                    <div id="reward-display" class="hidden">
+                        <div id="reward-icon">🎁</div>
+                        <h3 id="reward-name">Mảnh Sắt Vụn</h3>
+                        <p id="reward-desc">Chả có tác dụng gì mấy...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Modal -->
+        <div id="inventory-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn close-inventory">&times;</span>
+                <div class="modal-header">
+                    <h2>Túi Đồ Của Heo</h2>
+                </div>
+                <div class="modal-body">
+                    <div id="inventory-grid">
+                        <p>Chưa có gì cả...</p>
+                    </div>
+                    <div id="stats-display" style="margin-top:20px; border-top: 2px dashed #8d6e63; padding-top:10px;">
+                        <p>Sức Mài: <span id="click-power">1</span>/click</p>
+                        <p>Tự Động: <span id="auto-power">0</span>/giây</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recruit Modal (Outsourcing) -->
+        <div id="recruit-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn close-recruit">&times;</span>
+                <div class="modal-header">
+                    <h2>Tuyển Dụng & Nhân Sự</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="shop-list" id="recruit-list">
+                        <!-- Items injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Furniture Modal (Home Base) -->
+        <div id="furniture-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn close-furniture">&times;</span>
+                <div class="modal-header">
+                    <h2>Nâng Cấp Tổ Ấm</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="shop-list" id="furniture-list">
+                        <!-- Items injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Burnout Overlay -->
+        <div id="burnout-overlay">
+            <h1>😵 HEO ĐÃ SẬP NGUỒN!</h1>
+            <p>Cần nghỉ ngơi một chút...</p>
+        </div>
+
+        <!-- Meeting Overlay (Rhythm Game) -->
+        <div id="meeting-overlay" class="modal hidden">
+            <div class="meeting-content">
+                <div class="meeting-header">
+                    <h2>⚠️ HỌP GIAO BAN ĐỘT XUẤT! ⚠️</h2>
+                    <p>Vỗ tay theo nhịp để sếp vui!</p>
+                </div>
+
+                <div id="rhythm-track">
+                    <div id="target-zone"></div>
+                    <div id="notes-container"></div>
+                    <div id="combo-streak">0</div>
+                </div>
+
+                <div id="meeting-status">
+                    <p>Nhấn <span class="key-hint">SPACE</span> hoặc <span class="key-hint">CLICK</span> khi nốt nhạc
+                        trúng vạch!</p>
+                </div>
+
+                <div id="meeting-feedback" class="hidden">CHUẨN!</div>
+            </div>
+        </div>
+
+        <!-- Feedback Container for damage numbers/sparks -->
+        <div id="feedback-container"></div>
+    </div>
+    <script src="script.js?v=5.0"></script>
+    <script src="parallax.js"></script>
+</body>
+
+</html>
