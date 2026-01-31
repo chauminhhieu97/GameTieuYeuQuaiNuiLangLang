@@ -19,6 +19,20 @@
 
 <body>
     <div id="game-container">
+
+        <!-- DEBUG PANEL -->
+        <div id="debug-panel"
+            style="position: absolute; top: 120px; left: 10px; z-index: 200; display: flex; flex-direction: column; gap: 5px;">
+            <button class="btn-action" style="font-size: 12px; padding: 5px 10px;" onclick="testMiniGame('scrub')">🧼
+                Scrub</button>
+            <button class="btn-action" style="font-size: 12px; padding: 5px 10px;"
+                onclick="testMiniGame('steal_bun')">🥟 Eat</button>
+            <button class="btn-action" style="font-size: 12px; padding: 5px 10px;"
+                onclick="testMiniGame('catch_arrow')">🏹 Catch</button>
+            <button class="btn-action" style="font-size: 12px; padding: 5px 10px;" onclick="spawnSupervisor()">🐺
+                Boss</button>
+        </div>
+
         <!-- Intro Screen -->
         <div id="intro-screen">
             <div class="intro-content">
@@ -34,6 +48,8 @@
         <div id="sky-layer" class="time-dawn"></div>
         <!-- God Rays & Vignette -->
         <div id="lighting-layer"></div>
+        <!-- Stress Vignette -->
+        <div id="stress-vignette"></div>
 
         <!-- Spirit Layer (Mini-game) -->
         <div id="spirit-layer"></div>
@@ -44,7 +60,7 @@
         </div>
 
         <!-- Arrow Pile Logic (Visual) -->
-        <div id="arrow-pile"></div>
+        <div id="arrow-pile" class="hard-shadow"></div>
 
         <!-- Main Character Area -->
         <div id="character-area">
@@ -145,6 +161,27 @@
             </div>
         </div>
 
+        <!-- Task Switcher (Bottom Center) -->
+        <div id="task-switcher">
+            <button class="task-btn active" data-task="grind" onclick="switchTask('grind')">
+                <span class="icon">🏹</span>
+                <span class="label">Mài Tên</span>
+            </button>
+            <button class="task-btn" data-task="wood" onclick="switchTask('wood')">
+                <span class="icon">🪓</span>
+                <span class="label">Chặt Củi</span>
+            </button>
+            <button class="task-btn" data-task="cook" onclick="switchTask('cook')">
+                <span class="icon">🔥</span>
+                <span class="label">Nhóm Bếp</span>
+            </button>
+        </div>
+
+        <!-- Bow Button (Emergency) -->
+        <button id="bow-btn" class="hidden" onclick="performBow()">
+            🙇 CÚI CHÀO ĐẠI VƯƠNG!
+        </button>
+
         <!-- Inventory Modal -->
         <div id="inventory-modal" class="modal hidden">
             <div class="modal-content">
@@ -238,8 +275,10 @@
                 </filter>
             </defs>
         </svg>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
         <script src="effects.js"></script>
         <script src="minigames.js"></script>
+        <script src="job_mechanics.js"></script>
         <script src="living_world.js"></script>
         <script src="script.js?v=5.0"></script>
         <script src="parallax.js"></script>

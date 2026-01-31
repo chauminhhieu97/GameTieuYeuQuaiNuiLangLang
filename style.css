@@ -103,31 +103,45 @@ body::after {
 }
 
 /* Animation handled by JS SpriteAnimator for 24fps control */
-#pig-char:not(.anim-grind) {
-    /* No CSS animation */
-}
 
-/* Grind Anim (Row 2) */
-.anim-grind #pig-char,
-#pig-char.anim-grind {
-    /* No CSS animation */
-}
 
-@keyframes pigGrind {
-    from {
-        background-position: 0 50%;
-    }
 
-    to {
-        background-position: -400% 50%;
-    }
-}
 
 #game-container {
     position: relative;
     width: 100vw;
     height: 100vh;
     background-color: #000;
+}
+
+/* Cinematic Rules Support */
+.hard-shadow {
+    /* Rule: Light & Darkness - Hard Shadows */
+    filter: drop-shadow(5px 5px 0px rgba(0, 0, 0, 0.5));
+    /* 0 blur for hard edge */
+}
+
+/* Smear Frame Effect - Motion Blur simulation for 24fps jumps */
+.smear-motion {
+    animation: smearEffect 0.1s steps(1);
+}
+
+@keyframes smearEffect {
+    0% {
+        transform: scale(1.1, 0.9) skewX(20deg);
+        /* Stretch & Skew */
+        filter: blur(2px);
+    }
+
+    50% {
+        transform: scale(0.9, 1.2) skewX(-10deg);
+        filter: blur(1px);
+    }
+
+    100% {
+        transform: scale(1, 1) skewX(0);
+        filter: none;
+    }
 }
 
 /* Day/Night Cycle - Enhanced Gradients */
@@ -225,6 +239,13 @@ body::after {
     width: 100%;
     height: 100%;
     /* Idle Animation removed, handled by SpriteAnimator */
+}
+
+/* Apply Cinematic Shadow globally to characters */
+#character-wrapper,
+.char-wolf {
+    filter: drop-shadow(8px 8px 0px rgba(0, 0, 0, 0.4));
+    /* Hard Shadow Rule */
 }
 
 .squash-active {
@@ -585,26 +606,21 @@ body::after {
 }
 
 /* Wooden Sign Button */
-background: #8d6e63;
-border: 4px solid #3e2723;
-border-radius: 8px;
-/* Boxy wood shape */
-box-shadow: 0 5px 0 #3e2723,
-0 8px 10px rgba(0, 0, 0, 0.3);
-color: #fbe9e7;
-text-shadow: 1px 1px 0 #3e2723;
+.btn-wood {
+    background: #8d6e63;
+    border: 4px solid #3e2723;
+    border-radius: 8px;
+    /* Boxy wood shape */
+    box-shadow: 0 5px 0 #3e2723,
+        0 8px 10px rgba(0, 0, 0, 0.3);
+    color: #fbe9e7;
+    text-shadow: 1px 1px 0 #3e2723;
 
-/* Wood texture */
-background-image: repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 5px);
+    /* Wood texture */
+    background-image: repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 5px);
 }
 
-.btn-primary:active,
-.btn-action:active {
-    transform: translateY(5px);
-    box-shadow:
-        0 0 0 #3e2723,
-        0 2px 5px rgba(0, 0, 0, 0.3);
-}
+
 
 /* Hanging Rope Effect for Buttons */
 .dock-btn {
@@ -795,6 +811,175 @@ background-image: repeating-linear-gradient(90deg, transparent, transparent 4px,
     animation: particleMove 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
+/* Task Switcher - Hanging Wooden Tags */
+#task-switcher {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    z-index: 60;
+    align-items: flex-start;
+    /* For variable hanging lengths if desired */
+}
+
+/* Wood Tag Style */
+.task-btn {
+    position: relative;
+    background: #8D6E63;
+    /* Medium Wood */
+    border: 3px solid #3E2723;
+    border-radius: 8px 8px 16px 16px;
+    /* Rounded bottom like a tag */
+    padding: 15px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: 90px;
+    color: #FFF3E0;
+    box-shadow: 0 5px 0 #3E2723, 0 10px 10px rgba(0, 0, 0, 0.3);
+
+    /* Wood Texture */
+    background-image: repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 5px);
+    transform-origin: top center;
+}
+
+/* The String */
+.task-btn::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 20px;
+    background: #A1887F;
+    /* Rope */
+    z-index: -1;
+}
+
+/* The Nail/Knot */
+.task-btn::after {
+    content: '';
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    background: #3E2723;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.task-btn .icon {
+    font-size: 28px;
+    margin-bottom: 5px;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
+}
+
+.task-btn .label {
+    font-size: 14px;
+    font-weight: bold;
+    font-family: var(--font-main);
+    text-shadow: 1px 1px 0 #3E2723;
+}
+
+/* Hover & Active States */
+.task-btn:hover {
+    transform: translateY(-5px) rotate(3deg);
+}
+
+.task-btn:active,
+.task-btn.active {
+    background: #FFB74D;
+    /* Highlighted wood */
+    color: #3E2723;
+    border-color: #BF360C;
+    transform: translateY(5px);
+    /* Pulled down */
+    box-shadow: 0 2px 0 #3E2723;
+}
+
+.task-btn.active .label {
+    text-shadow: none;
+}
+
+/* Bow Button - Emergency Scroll */
+#bow-btn {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    /* Scroll Look */
+    background: #FFEBEE;
+    color: #B71C1C;
+    border: 5px solid #B71C1C;
+    padding: 20px 50px;
+    font-family: var(--font-main);
+    font-size: 32px;
+    font-weight: 900;
+    text-transform: uppercase;
+
+    /* Paper Texture */
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.1'/%3E%3C/svg%3E");
+
+    box-shadow:
+        0 0 0 5px #FFEBEE,
+        /* White border gap */
+        0 0 0 10px #B71C1C,
+        /* Outer red border */
+        0 20px 50px rgba(0, 0, 0, 0.5);
+    /* Deep shadow */
+
+    z-index: 200;
+    cursor: pointer;
+    animation: urgentPulse 0.4s infinite alternate;
+    white-space: nowrap;
+}
+
+#bow-btn::before {
+    content: "⚠️";
+    margin-right: 15px;
+}
+
+#bow-btn::after {
+    content: "⚠️";
+    margin-left: 15px;
+}
+
+@keyframes urgentPulse {
+    from {
+        transform: translate(-50%, -50%) scale(1);
+        filter: brightness(1);
+    }
+
+    to {
+        transform: translate(-50%, -50%) scale(1.1);
+        filter: brightness(1.2);
+    }
+}
+
+/* Stress Vignette */
+#stress-vignette {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 40;
+    /* Below UI but above game */
+    background: radial-gradient(circle at center, transparent 30%, rgba(62, 39, 35, 0.0) 60%, rgba(62, 39, 35, 0.9) 100%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    mix-blend-mode: multiply;
+}
+
 .particle.chip {
     width: 8px;
     height: 4px;
@@ -865,8 +1050,18 @@ background-image: repeating-linear-gradient(90deg, transparent, transparent 4px,
     z-index: 200;
     opacity: 0;
     pointer-events: none;
-    /* Default hidden state logic usually toggles display:none, but let's use opacity transition + hidden class */
     transition: opacity 0.3s;
+}
+
+/* Modal visible state */
+.modal:not(.hidden) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Hidden class - must override everything */
+.hidden {
+    display: none !important;
 }
 
 /* Bamboo Scroll Modal */
@@ -946,12 +1141,6 @@ background-image: repeating-linear-gradient(90deg, transparent, transparent 4px,
 .modal:not(.hidden) .modal-content {
     transform: scale(1) translateY(0);
     opacity: 1;
-}
-}
-
-.modal.hidden {
-    display: none;
-    /* Fallback for layout */
 }
 
 .modal-content {
@@ -1458,28 +1647,25 @@ background-image: repeating-linear-gradient(90deg, transparent, transparent 4px,
 }
 
 /* 2. Unified Dock (RPG Style) */
+/* 2. Unified Dock (RPG Style) - MOVED TO TOP RIGHT */
 .nav-dock {
     position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 20px;
+    right: 20px;
+    bottom: auto;
+    left: auto;
+    transform: none;
     display: flex;
-    gap: 20px;
-    padding: 15px 30px;
-    background: linear-gradient(to right, #5d4037, #3e2723, #5d4037);
+    gap: 15px;
+    padding: 10px 20px;
+    background: linear-gradient(to bottom, #5d4037, #3e2723);
     border: 3px solid #3e2723;
-    border-bottom: 6px solid #2d1c18;
-    /* Thicker bottom for weight */
+    border-bottom: 5px solid #2d1c18;
     border-radius: 8px;
-    /* Less rounded corners for shelf look */
-    box-shadow:
-        0 20px 40px rgba(0, 0, 0, 0.6),
-        inset 0 2px 3px rgba(255, 255, 255, 0.1),
-        0 5px 0 #2d1c18;
-    /* Fake 3D depth */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), inset 0 2px 3px rgba(255, 255, 255, 0.1);
     pointer-events: auto;
     z-index: 90;
-    min-width: 380px;
+    min-width: auto;
     justify-content: center;
 }
 
@@ -1497,8 +1683,8 @@ background-image: repeating-linear-gradient(90deg, transparent, transparent 4px,
 }
 
 .dock-btn {
-    width: 75px;
-    height: 75px;
+    width: 60px;
+    height: 60px;
     border-radius: 18px;
     border: none;
     background: linear-gradient(135deg,
@@ -1511,7 +1697,7 @@ background-image: repeating-linear-gradient(90deg, transparent, transparent 4px,
         0 12px 20px rgba(0, 0, 0, 0.4),
         0 0 20px rgba(255, 152, 0, 0.3);
     cursor: pointer;
-    font-size: 32px;
+    font-size: 26px;
     position: relative;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;

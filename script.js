@@ -34,6 +34,10 @@ const state = {
     meetingMaxNotes: 10,
     meetingNotesSpawned: 0,
     inputBuffer: false, // Prevent spamming
+    // Phase 8: Jobs & Hierarchy
+    job: 'grind', // grind, wood, cook
+    supervisorActive: false,
+    supervisorTimer: null,
     // Performance
     isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
     particleMultiplier: 1
@@ -106,7 +110,6 @@ const els = {
     stressIcon: document.getElementById('stress-icon'),
     screamBtn: document.getElementById('scream-btn'),
     eatBtn: document.getElementById('eat-btn'),
-    burnoutOverlay: document.getElementById('burnout-overlay'),
     burnoutOverlay: document.getElementById('burnout-overlay'),
     gameContainer: document.getElementById('game-container'),
     // Phase 6: Rhythm Game
@@ -283,6 +286,163 @@ function clickGrind(e) {
     state.lastClickTime = now;
 }
 
+// Phase 8: Job System
+window.switchTask = function (jobName) {
+    if (state.supervisorActive) return; // Cannot switch while bowing
+    state.job = jobName;
+
+    // UI Update
+    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.task-btn[data-task="${jobName}"]`).classList.add('active');
+
+    // Switch Physics Mechanics
+    if (typeof JobMechanics !== 'undefined') {
+        JobMechanics.startJob(jobName);
+    }
+
+    // Character Visual Update (Placeholder implementation could prompt image change)
+    // For now, we reuse Pig animator but different context could trigger different rows if we had them
+    playSound('uiClick');
+
+    // Reset specific storage for mechanics if needed
+    if (jobName === 'cook') {
+        // Init temp or show bar
+        els.frenzyContainer.style.display = 'flex'; // Reuse
+        els.frenzyLabel.innerText = "LỬA";
+    } else {
+        els.frenzyContainer.style.display = 'flex'; // Keep for other uses or hide
+        if (jobName === 'grind') els.frenzyLabel.innerText = "NHIỆT ĐỘ";
+        if (jobName === 'wood') els.frenzyLabel.innerText = "LỰC";
+    }
+}
+
+// Initial Job Start
+window.addEventListener('load', () => {
+    if (typeof JobMechanics !== 'undefined') {
+        // Give time for elements to render
+        setTimeout(() => JobMechanics.startJob('grind'), 500);
+    }
+});
+
+// Phase 8: Supervisor System
+window.performBow = function () {
+    if (!state.supervisorActive) return;
+
+    // Success Bow
+    state.supervisorActive = false;
+    document.getElementById('bow-btn').classList.add('hidden');
+    els.wolf.classList.remove('active');
+
+    // Reward/Relief
+    relieveStress(30);
+    dialogues.boss = ["Tốt! Biết điều đấy.", "Hừm. Làm việc tiếp đi."];
+    showDialogue(true); // Force boss dialogue
+    playSound('coin'); // Success sound
+};
+
+function checkSupervisor() {
+    // 5% chance every 10s check
+    if (Math.random() < 0.3 && !state.supervisorActive && !state.isBurnedOut) {
+        spawnSupervisor();
+    }
+}
+
+function spawnSupervisor() {
+    state.supervisorActive = true;
+    els.wolf.classList.add('active'); // Show Wolf
+    document.getElementById('bow-btn').classList.remove('hidden');
+
+    playSound('wolf', 'wolf'); // ROAR
+
+    // Initial Warning
+    dialogues.boss = ["THẤY ĐẠI VƯƠNG KHÔNG CHÀO À?!", "ĐỨA NÀO ĐANG LƯỜI BIẾNG?!"];
+    showDialogue(true);
+
+    // If player doesn't bow in 5 seconds -> Punishment
+    setTimeout(() => {
+        if (state.supervisorActive) {
+            // Failed to bow in time
+            state.supervisorActive = false;
+            document.getElementById('bow-btn').classList.add('hidden');
+            els.wolf.classList.remove('active');
+
+            // Punishment
+            state.stress += 50;
+            state.arrows = Math.max(0, state.arrows - 100); // Fired? Fined.
+            updateStressUI();
+            updateUI();
+
+            dialogues.boss = ["QUÁ LÁO! TRỪ LƯƠNG!", "TAO GHIM MÀY RỒI!"];
+            showDialogue(true);
+            playSound('error'); // Fail sound
+        }
+    }, 4000); // 4 seconds to react
+}
+
+setInterval(checkSupervisor, 15000); // Check often
+
+// Override Click Logic for Jobs
+function clickRouter(e) {
+    if (state.supervisorActive) {
+        // If clicking ANYTHING other than BOW -> Stress Punishment
+        if (e.target.id !== 'bow-btn') {
+            state.stress += 10;
+            updateStressUI();
+            spawnFeedback(e.clientX, e.clientY, "SỢ QUÁ!", false);
+            Haptics.heavy();
+            return;
+        }
+    }
+
+    if (state.job === 'grind') {
+        clickGrind(e);
+    } else if (state.job === 'wood') {
+        clickWood(e);
+    } else if (state.job === 'cook') {
+        clickCook(e);
+    }
+}
+
+// Replace Event Listener
+// Note: We need to remove the old onclick or ensure this router replaces it.
+// In HTML, hitbox often calls clickGrind directly? Or added via JS?
+// Searching for event listener init... Assuming we need to bind it.
+
+function clickWood(e) {
+    // Rhythm / Timing (Simulated)
+    // 50% chance to Hit, 50% Miss
+    const cleanHit = Math.random() > 0.4;
+    if (cleanHit) {
+        state.arrows += 5;
+        spawnFeedback(e.clientX, e.clientY, 5, false);
+        playSound('grind'); // Should be chop
+    } else {
+        spawnFeedback(e.clientX, e.clientY, "Trượt!", false);
+        state.stress += 2;
+    }
+    updateUI();
+    animatePig();
+}
+
+function clickCook(e) {
+    // Just add fuel
+    state.arrows += 2;
+    spawnFeedback(e.clientX, e.clientY, 2, false);
+    // Maybe visual fire effect
+    spawnInkParticle(e.clientX, e.clientY);
+    updateUI();
+}
+
+// Initialization Hooks (Append to init or replace Hitbox listener)
+if (els.hitbox) {
+    els.hitbox.onclick = clickRouter; // Override
+} else {
+    // Retry or wait window load
+    window.addEventListener('load', () => {
+        document.getElementById('grind-stone-hitbox').onclick = clickRouter;
+    });
+}
+
 function calculateStress(now) {
     if (state.isBurnedOut) return;
 
@@ -337,6 +497,18 @@ function triggerBurnout() {
 function updateStressUI() {
     const pct = (state.stress / state.maxStress) * 100;
     els.stressBar.style.width = `${pct}%`;
+
+    // Vignette Opacity (Starts visible at 30% stress)
+    const vignetteEl = document.getElementById('stress-vignette');
+    if (vignetteEl) {
+        if (state.stress > 30) {
+            // Map 30-100 to 0.0-1.0
+            const opacity = (state.stress - 30) / 70;
+            vignetteEl.style.opacity = opacity;
+        } else {
+            vignetteEl.style.opacity = 0;
+        }
+    }
 
     if (state.stress > 80) {
         els.stressBar.classList.add('danger');
@@ -477,6 +649,14 @@ class SpriteAnimator {
     triggerAction(actionState, duration = null) {
         const previous = this.currentState;
         this.setState(actionState);
+
+        // Smear Frame Logic: If action is fast, add smear
+        if (actionState === 'grind' || actionState === 'shout') {
+            this.el.classList.remove('smear-motion');
+            void this.el.offsetWidth; // Trigger reflow
+            this.el.classList.add('smear-motion');
+            setTimeout(() => this.el.classList.remove('smear-motion'), 100);
+        }
 
         // If duration is null, rely on animation end (not easily detected in this loop without callback)
         // So we stick to duration or manually switch back
@@ -735,55 +915,100 @@ const AudioMixer = {
 
     playSynthetic: function (key, channel, pitch) {
         const t = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
 
-        // Master connect
-        gain.connect(this.channels[channel]); // Connect to channel instead of destination for volume control
+        // --- SONIC BRANDING RULES ---
+        // PIG: High pitch, rusty, nasal (Sawtooth/Triangle + Noise)
+        // WOLF: Low, threatening, reverb (Sawtooth + Lowpass)
+        // PATROL/SFX: Metallic, clanking
 
-        // Sonic Branding Logic
         if (channel === 'pig') {
-            // Pig: "Ot ot" / "Scritch" - Lanh lảnh, high pitch, texture
+            // Pig Character
             if (key === 'grind') {
-                // Wood grinding sound (Noise + Bandpass)
-                this.playNoise(t, 0.1, 800, 1.0); // Helper for noise
-                return; // Noise handled separately
+                // Rusty Metal Sound: Noise + Bandpass
+                this.playNoise(t, 0.1, 1200, 0.5);
+                // Undertone
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth'; // Rougher
+                osc.frequency.setValueAtTime(150, t);
+                osc.frequency.linearRampToValueAtTime(100, t + 0.1);
+
+                gain.connect(this.channels[channel]);
+                osc.connect(gain);
+
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+                osc.start(t);
+                osc.stop(t + 0.1);
+                return;
             } else if (key === 'crit') {
+                // Excited Squeal
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                gain.connect(this.channels[channel]);
+                osc.connect(gain);
+
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(800 * pitch, t);
-                osc.frequency.exponentialRampToValueAtTime(300, t + 0.1); // "Pew" effect
+                osc.frequency.setValueAtTime(600 * pitch, t);
+                osc.frequency.exponentialRampToValueAtTime(900, t + 0.15); // Upsweep
+
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.5, t + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+
+                osc.start(t);
+                osc.stop(t + 0.3);
+                return;
             } else {
+                // Default Talk
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                gain.connect(this.channels[channel]);
+                osc.connect(gain);
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(500 * pitch, t);
+                osc.frequency.setValueAtTime(400 + Math.random() * 100, t);
+                gain.gain.setValueAtTime(0.3, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                osc.start(t);
+                osc.stop(t + 0.1);
+                return;
             }
         } else if (channel === 'wolf') {
-            // Wolf: "Gao" - Low, Sawtooth, Rough
+            // King/Boss: Low & Scary
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            gain.connect(this.channels[channel]); // Goes to Reverb if we add it
+            osc.connect(gain);
+
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(100 * pitch, t);
+            osc.frequency.setValueAtTime(80 * pitch, t); // Very Low
             // Pitch drop for growl
-            osc.frequency.linearRampToValueAtTime(80 * pitch, t + 0.3);
+            osc.frequency.linearRampToValueAtTime(60 * pitch, t + 0.5);
 
-            // Add distortion/wobble via second osc ideally, but keep simple
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.8, t + 0.1); // Slow attack
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.6); // Long decay
+
+            osc.start(t);
+            osc.stop(t + 0.6);
+            return;
         } else {
-            // SFX
-            osc.type = 'sine';
+            // SFX / Metal / Patrol
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            gain.connect(this.channels[channel]);
+            osc.connect(gain);
+
+            osc.type = 'square'; // Metallic
             osc.frequency.setValueAtTime(440 * pitch, t);
+
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+            osc.start(t);
+            osc.stop(t + 0.1);
         }
-
-        // Envelope (Ink-wash style: Soft attack, organic decay)
-        const duration = (channel === 'wolf') ? 0.3 : 0.1;
-        gain.gain.setValueAtTime(0, t);
-
-        // Attack
-        const attack = (key === 'grind') ? 0.01 : 0.05;
-        gain.gain.linearRampToValueAtTime(this.channels[channel].gain.value, t + attack);
-
-        // Decay
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-        osc.connect(gain);
-        osc.start(t);
-        osc.stop(t + duration);
     },
 
     playNoise: function (startTime, duration, freq, volume) {
@@ -798,23 +1023,24 @@ const AudioMixer = {
         const noise = this.ctx.createBufferSource();
         noise.buffer = buffer;
 
-        // Filter for "Wood" sound
+        // Filter
         const filter = this.ctx.createBiquadFilter();
         filter.type = 'bandpass';
         filter.frequency.value = freq;
-        filter.Q.value = 1; // Resonance
+        filter.Q.value = 1;
 
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(volume * 0.5, startTime + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        gain.gain.setValueAtTime(volume, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
 
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.channels['sfx']); // Noise always to SFX/Pig channel
 
         noise.start(startTime);
     }
+
+
 };
 
 // Initialize Mixer
@@ -1672,6 +1898,37 @@ function startMiniGameMeeting() {
 
     // Start Random Game
     MiniGames.startRandom(container);
+}
+
+// DEBUG: Test specific mini-game
+window.testMiniGame = function (gameKey) {
+    if (state.meetingActive) return;
+
+    state.meetingActive = true;
+    els.meetingOverlay.classList.remove('hidden');
+    els.notesContainer.innerHTML = '';
+
+    // Ensure container exists
+    let container = document.getElementById('minigame-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'minigame-container';
+        container.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        `;
+        els.meetingOverlay.appendChild(container);
+    }
+
+    MiniGames.start(gameKey, container);
 }
 
 function spawnNote() {
