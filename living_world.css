@@ -1,0 +1,147 @@
+/* ==========================================
+   LIVING WORLD: BIRDS & CHATTER
+   ========================================== */
+
+/* 1. MESSENGER BIRD */
+.bird-messenger {
+    position: absolute;
+    top: 20%;
+    left: -100px;
+    width: 60px;
+    height: 40px;
+    background-image: url('assets/bird_sprite.png');
+    /* Fallback needed */
+    background-size: contain;
+    background-repeat: no-repeat;
+    z-index: 80;
+    cursor: pointer;
+    transition: transform 0.1s;
+    filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.2));
+}
+
+/* Fallback visual for bird using CSS shapes if image missing */
+.bird-messenger.fallback {
+    background: none;
+}
+
+.bird-messenger.fallback::after {
+    content: '🕊️';
+    font-size: 40px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    animation: flap 0.5s infinite alternate;
+}
+
+@keyframes flyAcross {
+    0% {
+        left: -100px;
+        transform: translateY(0) rotate(5deg);
+    }
+
+    25% {
+        transform: translateY(-30px) rotate(-5deg);
+    }
+
+    50% {
+        transform: translateY(0) rotate(5deg);
+    }
+
+    75% {
+        transform: translateY(-20px) rotate(-5deg);
+    }
+
+    100% {
+        left: 110%;
+        transform: translateY(0) rotate(5deg);
+    }
+}
+
+@keyframes flap {
+    0% {
+        transform: scaleY(1);
+    }
+
+    100% {
+        transform: scaleY(0.6);
+    }
+}
+
+/* Dropped Item */
+.dropped-item {
+    position: absolute;
+    font-size: 30px;
+    animation: dropDown 1s ease-in forwards;
+    z-index: 79;
+}
+
+@keyframes dropDown {
+    0% {
+        transform: translateY(0) rotate(0);
+    }
+
+    100% {
+        transform: translateY(300px) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* 2. CHATTER BUBBLE */
+.chatter-bubble {
+    position: absolute;
+    bottom: 100%;
+    /* Above head */
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    border: 2px solid #3e2723;
+    padding: 10px 15px;
+    border-radius: 12px;
+    font-family: var(--font-main);
+    font-size: 16px;
+    color: #3e2723;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 100;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.chatter-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px 8px 0;
+    border-style: solid;
+    border-color: #3e2723 transparent transparent transparent;
+}
+
+.chatter-bubble.show {
+    opacity: 1;
+    animation: floatChatter 3s ease-in-out;
+}
+
+@keyframes floatChatter {
+    0% {
+        transform: translateX(-50%) translateY(10px);
+        opacity: 0;
+    }
+
+    10% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    90% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+    }
+}

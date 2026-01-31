@@ -63,14 +63,64 @@ body::after {
     height: 100%;
     z-index: 999;
     /* Top level overlay */
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
-    background-color: #f4e4bc;
-    /* Aged paper color */
+    /* Improved Paper Texture */
+    background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' viewBox='0 0 600 600' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E"),
+        url("assets/ui_paper_scroll.png");
+    /* Use scroll texture if available as subtle overlay pattern */
+    background-size: auto, cover;
+    background-color: #fcf6e3;
+    /* Warmer, lighter rice paper */
     background-blend-mode: multiply;
     opacity: 0.2;
-    /* Subtle texture */
     pointer-events: none;
     mix-blend-mode: multiply;
+}
+
+/* Character Sprite Adjustment - Grid Sheet */
+#pig-char.char-pig {
+    background-image: url('assets/character_sheet_pig.png');
+    background-size: 400% 300%;
+    /* 4 cols, 3 rows */
+    background-position: 0 0;
+    /* Row 1: Idle */
+
+    /* Animation Steps */
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    /* Crisp edges */
+}
+
+/* Idle Anim */
+@keyframes pigIdle {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: -400% 0;
+    }
+}
+
+/* Animation handled by JS SpriteAnimator for 24fps control */
+#pig-char:not(.anim-grind) {
+    /* No CSS animation */
+}
+
+/* Grind Anim (Row 2) */
+.anim-grind #pig-char,
+#pig-char.anim-grind {
+    /* No CSS animation */
+}
+
+@keyframes pigGrind {
+    from {
+        background-position: 0 50%;
+    }
+
+    to {
+        background-position: -400% 50%;
+    }
 }
 
 #game-container {
@@ -89,6 +139,7 @@ body::after {
     height: 100%;
     transition: background 3s ease;
     z-index: 1;
+    /* Sky behind mountains */
 }
 
 .time-dawn {
@@ -108,6 +159,7 @@ body::after {
 }
 
 /* Background Mountain */
+/* Background Mountain */
 #mountain-layer {
     position: absolute;
     bottom: 0;
@@ -115,17 +167,43 @@ body::after {
     width: 100%;
     height: 100%;
     z-index: 2;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    /* Removed flex centering to allow custom layers */
 }
 
-#mountain-layer img {
+/* Layer 1: Far Mountains */
+#mountain-layer::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    opacity: 0.95;
-    filter: brightness(0.9) contrast(1.1);
+    background-image: url('assets/mountain_bg_far.png');
+    background-size: cover;
+    background-position: center top;
+    opacity: 0.8;
+    z-index: 1;
+}
+
+/* Layer 2: Mid Hills */
+#mountain-layer::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 120%;
+    /* Parallax width */
+    height: 80%;
+    background-image: url('assets/mountain_bg_mid.png');
+    background-size: cover;
+    background-position: center bottom;
+    z-index: 2;
+    mix-blend-mode: multiply;
+}
+
+/* Remove old img tag styling */
+#mountain-layer img {
+    display: none;
 }
 
 /* Character */
@@ -189,37 +267,14 @@ body::after {
     margin: 0 auto;
     background-color: transparent;
     border: none;
-    /* Remove any debug borders */
+    /* Ink Boil Effect (CSS fallback) */
+    /* will-change: transform; */
 }
 
 /* Character Skins */
-.char-pig {
-    background-image: url('assets/pig_sprite_sheet.png');
-    display: block;
-    background-color: transparent;
-    border: none;
-
-    /* 2x2 Grid Logic */
-    width: 100%;
-    /* Fill container */
-    height: 100%;
-
-    /* 2x2 Grid Logic - Enforced */
-    /* Crop Zoom: Use 220% instead of 200% to cut off edges (numbers) */
-    background-size: 220% 220% !important;
-    background-position: 0 0;
-
-    background-repeat: no-repeat;
-
-    /* Fix for "White Background" - SVG Magic */
-    /* This calculates alpha based on brightness: White becomes transparent */
-    filter: url(#remove-background) contrast(1.2);
-    mix-blend-mode: normal;
-    /* Reset multiply */
-
-    /* Ensure no background color on self */
-    background-color: transparent !important;
-}
+/* Character Skins - Legacy Logic (Removed to favor new Sprite) */
+/* .char-pig definition moved to top of file for new sprite sheet */
+/* Fallback for other skins if needed */
 
 /* Boss Sói */
 .char-wolf {
@@ -384,14 +439,19 @@ body::after {
     outline: 2px dashed #8d6e63;
     outline-offset: -8px;
 
+    /* Ink Bleed Shadow */
     box-shadow:
-        5px 5px 0 rgba(62, 39, 35, 0.2),
-        0 0 10px rgba(0, 0, 0, 0.1);
+        0 0 0 2px #3e2723,
+        /* Hard edge */
+        0 0 8px 1px rgba(62, 39, 35, 0.6),
+        /* Bleed */
+        5px 5px 15px rgba(0, 0, 0, 0.3);
+    /* Depth */
 
-    /* Paper Texture */
+    /* Paper Texture Internal */
     background-image:
-        linear-gradient(90deg, transparent 50%, rgba(0, 0, 0, 0.02) 50%),
-        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(139, 69, 19, 0.1) 20px);
+        linear-gradient(90deg, transparent 50%, rgba(0, 0, 0, 0.03) 50%),
+        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(139, 69, 19, 0.05) 20px);
     background-size: 20px 20px;
 }
 
@@ -522,6 +582,71 @@ body::after {
         inset 0 4px 2px rgba(0, 0, 0, 0.2),
         0 0 0 #bf360c,
         0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Wooden Sign Button */
+background: #8d6e63;
+border: 4px solid #3e2723;
+border-radius: 8px;
+/* Boxy wood shape */
+box-shadow: 0 5px 0 #3e2723,
+0 8px 10px rgba(0, 0, 0, 0.3);
+color: #fbe9e7;
+text-shadow: 1px 1px 0 #3e2723;
+
+/* Wood texture */
+background-image: repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 5px);
+}
+
+.btn-primary:active,
+.btn-action:active {
+    transform: translateY(5px);
+    box-shadow:
+        0 0 0 #3e2723,
+        0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Hanging Rope Effect for Buttons */
+.dock-btn {
+    position: relative;
+    background: #FFB74D;
+    /* Lighter wood */
+    border: 3px solid #5D4037;
+    border-radius: 5px;
+    box-shadow: 0 4px 0 #3E2723;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dock-btn::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 12px;
+    background: #8D6E63;
+    /* String */
+    z-index: -1;
+}
+
+.dock-btn::after {
+    content: '';
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: #3E2723;
+    /* Nail */
+    border-radius: 50%;
+    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.dock-btn:hover {
+    transform: rotate(5deg) scale(1.1);
+    /* Swing */
 }
 
 /* Shine Effect */
@@ -673,8 +798,10 @@ body::after {
 .particle.chip {
     width: 8px;
     height: 4px;
-    background: #8d6e63;
-    border-radius: 2px;
+    background: #4e342e;
+    /* Dark Ink */
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    /* Irregular ink blot */
 }
 
 .particle.spark {
@@ -742,9 +869,84 @@ body::after {
     transition: opacity 0.3s;
 }
 
-.modal:not(.hidden) {
+/* Bamboo Scroll Modal */
+.modal-content {
+    background: #FDF5E6;
+    /* Fallback */
+    /* Bamboo Strips */
+    background-image:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(#f4e4bc 95%, #e0c38c 100%);
+    /* Strip depth */
+    background-size: 40px 100%;
+    /* Strip width */
+
+    border-top: 15px solid #3e2723;
+    /* Scroll top bar */
+    border-bottom: 15px solid #3e2723;
+    /* Scroll bottom bar */
+    border-left: none;
+    border-right: none;
+    border-radius: 4px;
+
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.5),
+        inset 0 0 50px rgba(139, 69, 19, 0.2);
+    /* Inner shadow for curvature */
+
+    width: 90%;
+    max-width: 500px;
+    padding: 30px;
+    position: relative;
+    transform: scale(0.8) translateY(50px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Red String Binding */
+.modal-content::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 20%;
+    width: 5px;
+    height: 100%;
+    height: calc(100% + 30px);
+    background: #b71c1c;
+    /* Red string */
+    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content::after {
+    content: '';
+    position: absolute;
+    top: -15px;
+    right: 20%;
+    width: 5px;
+    height: calc(100% + 30px);
+    background: #b71c1c;
+    box-shadow: 1px 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header h2 {
+    font-family: 'Pangolin', cursive;
+    color: #3e2723;
+    text-align: center;
+    border-bottom: 2px dashed #8d6e63;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    /* Ink stamp look */
+    transform: rotate(-1deg);
+}
+
+.modal.hidden .modal-content {
+    transform: scale(0.5) translateY(100px);
+    opacity: 0;
+}
+
+.modal:not(.hidden) .modal-content {
+    transform: scale(1) translateY(0);
     opacity: 1;
-    pointer-events: auto;
+}
 }
 
 .modal.hidden {

@@ -1,0 +1,418 @@
+/* ==========================================
+   ADVANCED UI/UX EFFECTS & ANIMATIONS
+   Ink-Wash Cinematic Style
+   ========================================== */
+
+/* Ink Splash Effect on Click */
+@keyframes inkSplash {
+    0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.5) rotate(180deg);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(2.5) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+.ink-splash {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(62, 39, 35, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: inkSplash 0.8s ease-out forwards;
+    z-index: 999;
+}
+
+/* Brush Stroke Reveal Animation */
+@keyframes brushStroke {
+    0% {
+        clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+        opacity: 0;
+    }
+
+    100% {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+        opacity: 1;
+    }
+}
+
+.brush-reveal {
+    animation: brushStroke 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Paper Unfold Effect for Modals */
+@keyframes paperUnfold {
+    0% {
+        transform: perspective(1000px) rotateX(-90deg) scale(0.8);
+        opacity: 0;
+    }
+
+    50% {
+        transform: perspective(1000px) rotateX(-45deg) scale(0.9);
+    }
+
+    100% {
+        transform: perspective(1000px) rotateX(0deg) scale(1);
+        opacity: 1;
+    }
+}
+
+.modal:not(.hidden) .modal-content {
+    animation: paperUnfold 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Calligraphy Writing Effect */
+@keyframes writeText {
+    0% {
+        width: 0;
+        opacity: 0;
+    }
+
+    1% {
+        opacity: 1;
+    }
+
+    100% {
+        width: 100%;
+        opacity: 1;
+    }
+}
+
+.calligraphy-text {
+    overflow: hidden;
+    white-space: nowrap;
+    animation: writeText 1s steps(20) forwards;
+}
+
+/* Ink Drip Effect */
+@keyframes inkDrip {
+    0% {
+        transform: translateY(-20px) scaleY(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: translateY(0) scaleY(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100px) scaleY(1.5);
+        opacity: 0;
+    }
+}
+
+.ink-drip {
+    position: absolute;
+    width: 3px;
+    height: 20px;
+    background: linear-gradient(to bottom, #3e2723, transparent);
+    animation: inkDrip 1.5s ease-in forwards;
+    pointer-events: none;
+}
+
+/* Bamboo Scroll Unroll */
+@keyframes scrollUnroll {
+    0% {
+        max-height: 0;
+        opacity: 0;
+        transform: scaleY(0);
+        transform-origin: top;
+    }
+
+    100% {
+        max-height: 500px;
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+.scroll-unroll {
+    animation: scrollUnroll 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Floating Lantern Effect */
+@keyframes floatLantern {
+
+    0%,
+    100% {
+        transform: translateY(0) translateX(0);
+    }
+
+    25% {
+        transform: translateY(-10px) translateX(5px);
+    }
+
+    50% {
+        transform: translateY(-5px) translateX(-5px);
+    }
+
+    75% {
+        transform: translateY(-15px) translateX(3px);
+    }
+}
+
+.floating-lantern {
+    animation: floatLantern 4s ease-in-out infinite;
+}
+
+/* Seal Stamp Effect */
+@keyframes stampSeal {
+    0% {
+        transform: scale(0) rotate(-45deg);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.2) rotate(5deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.seal-stamp {
+    animation: stampSeal 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Ripple Effect on Click */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    width: 20px;
+    height: 20px;
+    animation: ripple 0.6s ease-out;
+    pointer-events: none;
+}
+
+/* Glow Pulse for Important Elements */
+@keyframes glowPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.3),
+            0 0 10px rgba(255, 215, 0, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.6),
+            0 0 30px rgba(255, 215, 0, 0.4),
+            0 0 40px rgba(255, 215, 0, 0.2);
+    }
+}
+
+.glow-pulse {
+    animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Shake Effect for Errors */
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-5px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(5px);
+    }
+}
+
+.shake-error {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Bounce In Effect */
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.bounce-in {
+    animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Fade Slide In from Bottom */
+@keyframes fadeSlideUp {
+    0% {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.fade-slide-up {
+    animation: fadeSlideUp 0.4s ease-out forwards;
+}
+
+/* Particle Burst Effect */
+@keyframes particleBurst {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--tx), var(--ty)) scale(0);
+        opacity: 0;
+    }
+}
+
+.particle-burst {
+    animation: particleBurst 0.8s ease-out forwards;
+}
+
+/* Success Checkmark Animation */
+@keyframes drawCheck {
+    0% {
+        stroke-dashoffset: 100;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+.success-check {
+    stroke-dasharray: 100;
+    animation: drawCheck 0.6s ease-out forwards;
+}
+
+/* Shimmer Effect for Buttons */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.shimmer-effect {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Hover Lift Effect */
+.hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Ink Blot Spread */
+@keyframes inkBlot {
+    0% {
+        transform: scale(0);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+.ink-blot {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(circle, #3e2723 0%, transparent 70%);
+    border-radius: 50%;
+    animation: inkBlot 1s ease-out forwards;
+    pointer-events: none;
+}
+
+/* Progress Bar Fill Animation */
+@keyframes progressFill {
+    0% {
+        width: 0%;
+    }
+
+    100% {
+        width: var(--progress-width);
+    }
+}
+
+.progress-fill {
+    animation: progressFill 1s ease-out forwards;
+}
+
+/* Rotate Coin Flip */
+@keyframes coinFlip {
+    0% {
+        transform: rotateY(0deg);
+    }
+
+    100% {
+        transform: rotateY(1080deg);
+    }
+}
+
+.coin-flip {
+    animation: coinFlip 1s ease-out;
+}

@@ -247,6 +247,9 @@ function clickGrind(e) {
         document.body.classList.remove('shake-screen');
         void document.body.offsetWidth;
         document.body.classList.add('shake-screen');
+        Haptics.heavy(); // Crit Impact
+    } else {
+        Haptics.light(); // Normal grind
     }
 
     // Hit flash on pig
@@ -495,16 +498,20 @@ class SpriteAnimator {
 // 2x2 Grid:
 // [0,0 Idle] [0,1 Grind]
 // [1,0 Sleep] [1,1 Panic]
+// Pig Configuration V4 (Fixed for 4x3 layout and 24fps)
 const pigAnimator = new SpriteAnimator('pig-char', {
-    cols: 2,
-    rows: 2,
-    fps: 12, // 12fps jitter
+    cols: 4,     // 400% width implied 4 cols
+    rows: 3,     // 300% height implied 3 rows
+    fps: 24,     // Cinematic 24fps
     states: {
-        'idle': { row: 0, colOffset: 0, frames: 1 },  // STATIC Pose 1
-        'grind': { row: 0, colOffset: 1, frames: 1 }, // STATIC Pose 2
-        'action': { row: 0, colOffset: 1, frames: 1 },
-        'sleep': { row: 1, colOffset: 0, frames: 1 }, // STATIC Pose 3
-        'panic': { row: 1, colOffset: 1, frames: 1 }  // STATIC Pose 4
+        // Idle: Row 0. We can cycle 4 frames or hold 1. Let's cycle 4 for "breathing" if sheet has it.
+        'idle': { row: 0, frames: 4, loop: true },
+
+        // Grind: Row 1. Fast action.
+        'grind': { row: 1, frames: 4, loop: true },
+
+        // Panic/Sleep: Row 2? We'll assume Row 2 is panic/special.
+        'panic': { row: 2, frames: 4, loop: true }
     }
 });
 
@@ -638,10 +645,37 @@ function spawnFeedback(x, y, amount, isCrit, isAuto = false) {
         setTimeout(() => spark.remove(), 800);
     }
 
-    // Sweat (Random chance) - Skip on mobile
-    if (!state.isMobile && Math.random() < 0.15) {
-        spawnSweat();
+    // Ink Splat (Visual Juice)
+    if (!state.isMobile && Math.random() < 0.5) {
+        spawnInkParticle(x, y);
     }
+}
+
+function spawnInkParticle(x, y) {
+    const ink = document.createElement('div');
+    ink.className = 'particle chip';
+
+    // Random position offset
+    const offsetX = (Math.random() - 0.5) * 60;
+    const offsetY = (Math.random() - 0.5) * 60;
+
+    ink.style.left = `${x + offsetX}px`;
+    ink.style.top = `${y + offsetY}px`;
+
+    // Ink spread physics
+    const scale = 0.5 + Math.random();
+    ink.style.transform = `scale(${scale})`;
+
+    // Physics
+    const tx = (Math.random() - 0.5) * 100;
+    const ty = (Math.random() - 0.5) * 100 + 50; // Fall down slightly
+
+    ink.style.setProperty('--tx', `${tx}px`);
+    ink.style.setProperty('--ty', `${ty}px`);
+    ink.style.setProperty('--rot', `${Math.random() * 360}deg`);
+
+    els.feedback.appendChild(ink);
+    setTimeout(() => ink.remove(), 800);
 }
 
 function spawnSweat() {
@@ -700,45 +734,86 @@ const AudioMixer = {
     },
 
     playSynthetic: function (key, channel, pitch) {
+        const t = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
-        // Branding Logic
+        // Master connect
+        gain.connect(this.channels[channel]); // Connect to channel instead of destination for volume control
+
+        // Sonic Branding Logic
         if (channel === 'pig') {
-            osc.type = 'triangle'; // Smooth, naive
-            pitch *= 1.2; // High pitch for Pig
+            // Pig: "Ot ot" / "Scritch" - Lanh lảnh, high pitch, texture
+            if (key === 'grind') {
+                // Wood grinding sound (Noise + Bandpass)
+                this.playNoise(t, 0.1, 800, 1.0); // Helper for noise
+                return; // Noise handled separately
+            } else if (key === 'crit') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800 * pitch, t);
+                osc.frequency.exponentialRampToValueAtTime(300, t + 0.1); // "Pew" effect
+            } else {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500 * pitch, t);
+            }
         } else if (channel === 'wolf') {
-            osc.type = 'sawtooth'; // Rough, aggressive
-            pitch *= 0.5; // Deep bass for Wolf
+            // Wolf: "Gao" - Low, Sawtooth, Rough
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100 * pitch, t);
+            // Pitch drop for growl
+            osc.frequency.linearRampToValueAtTime(80 * pitch, t + 0.3);
+
+            // Add distortion/wobble via second osc ideally, but keep simple
         } else {
+            // SFX
             osc.type = 'sine';
+            osc.frequency.setValueAtTime(440 * pitch, t);
         }
 
-        let freq = 0;
-        let duration = 0.1;
+        // Envelope (Ink-wash style: Soft attack, organic decay)
+        const duration = (channel === 'wolf') ? 0.3 : 0.1;
+        gain.gain.setValueAtTime(0, t);
 
-        switch (key) {
-            case 'grind': freq = 150; duration = 0.1; break; // Wood sound
-            case 'crit': freq = 800; duration = 0.2; break; // Metal spark
-            case 'pop': freq = 400; duration = 0.05; break; // Bubble
-            case 'shout': freq = 100; duration = 0.4; break; // Wolf shout
-            case 'step': freq = 60; duration = 0.1; break; // Heavy step
-            default: freq = 440;
-        }
+        // Attack
+        const attack = (key === 'grind') ? 0.01 : 0.05;
+        gain.gain.linearRampToValueAtTime(this.channels[channel].gain.value, t + attack);
 
-        // Apply pitch
-        osc.frequency.setValueAtTime(freq * pitch, this.ctx.currentTime);
-
-        // Envelope for "Inkwash" organic feel (soft attack/decay)
-        gain.gain.setValueAtTime(0, this.ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(this.channels[channel].gain.value, this.ctx.currentTime + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        // Decay
+        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
         osc.connect(gain);
+        osc.start(t);
+        osc.stop(t + duration);
+    },
+
+    playNoise: function (startTime, duration, freq, volume) {
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1; // White noise
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        // Filter for "Wood" sound
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = freq;
+        filter.Q.value = 1; // Resonance
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(volume * 0.5, startTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+        noise.connect(filter);
+        filter.connect(gain);
         gain.connect(this.ctx.destination);
 
-        osc.start();
-        osc.stop(this.ctx.currentTime + duration);
+        noise.start(startTime);
     }
 };
 
@@ -759,12 +834,31 @@ const SoundFX = {
     }
 };
 
+const Haptics = {
+    enabled: true,
+
+    vibrate: function (pattern) {
+        if (!this.enabled || !navigator.vibrate) return;
+        try {
+            navigator.vibrate(pattern);
+        } catch (e) {
+            // Ignore if disallowed
+        }
+    },
+
+    light: function () { this.vibrate(5); }, // Subtle tick
+    medium: function () { this.vibrate(15); },
+    heavy: function () { this.vibrate([10, 30, 20]); }, // Crunch
+    rumble: function () { this.vibrate([50, 50, 50, 50, 100]); } // Boss
+};
+
+
 function playSound(type) {
     try {
         if (type === 'grind') SoundFX.grind();
-        else if (type === 'crit') SoundFX.crit();
+        else if (type === 'crit') { SoundFX.crit(); Haptics.heavy(); }
         else if (type === 'coin') SoundFX.coin();
-        else if (type === 'ui') SoundFX.uiClick();
+        else if (type === 'ui') { SoundFX.uiClick(); Haptics.light(); }
         else if (type === 'fanfare') SoundFX.fanfare();
     } catch (e) { console.warn("Audio error", e); }
 }
@@ -1061,6 +1155,17 @@ function selectCharacter(key) {
 
     // Force style recalculation
     void pigEl.offsetWidth;
+
+    // Enhanced feedback
+    if (typeof Effects !== 'undefined') {
+        Effects.sealStamp(pigEl);
+        Effects.particleBurst(
+            window.innerWidth / 2,
+            window.innerHeight / 2,
+            12,
+            '#bf360c'
+        );
+    }
 
     // Audio cue
     playSound('fanfare');
@@ -1473,23 +1578,59 @@ let meetingInterval;
 let noteSpeed = 3; // px per frame
 const TARGET_X = 100; // Left position of target zone
 
+// Main Meeting Trigger
 function startMeeting() {
     if (state.meetingActive || state.isBurnedOut) return;
 
+    // High Chance (80%) for Mini-game to showcase new features
+    if (typeof MiniGames !== 'undefined' && Math.random() < 0.8) {
+        startMiniGameMeeting();
+        return;
+    }
+
+    // Default Rhythm Game Logic (Existing code)
     state.meetingActive = true;
     state.meetingScore = 0;
     state.meetingNotesSpawned = 0;
-    state.combo = 0; // Reset main combo too? Maybe keep it separate.
-    updateCombo(); // Reset UI
+    state.combo = 0;
+    updateCombo();
 
     els.meetingOverlay.classList.remove('hidden');
     els.meetingFeedback.classList.add('hidden');
     els.comboStreak.textContent = "0";
     els.notesContainer.innerHTML = '';
 
-    playSound('ui'); // Alert sound
+    // Instructions
+    const instructions = document.createElement('div');
+    instructions.id = 'meeting-instructions';
+    instructions.innerHTML = `
+        <div style="
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 10;
+            animation: bounce-in 0.5s ease-out;
+        ">
+            <h2 style="margin: 0 0 10px 0; color: #bf360c; font-size: 28px;">🎭 HỌP GIAO BAN ĐỘT XUẤT!</h2>
+            <p style="margin: 0; color: #3e2723; font-size: 18px; font-weight: bold;">
+                👏 VỖ TAY THEO NHỊP KHI DẤU 👏 VÀO VÙNG SÁNG!
+            </p>
+            <p style="margin: 5px 0 0 0; color: #5d4037; font-size: 14px;">
+                Nhấn SPACE hoặc Click màn hình đúng lúc!
+            </p>
+        </div>
+    `;
+    els.meetingOverlay.appendChild(instructions);
+    setTimeout(() => instructions.remove(), 3000);
 
-    // Spawn notes periodically
+    playSound('ui');
+
     meetingInterval = setInterval(() => {
         if (!state.meetingActive) return;
 
@@ -1497,20 +1638,47 @@ function startMeeting() {
             spawnNote();
             state.meetingNotesSpawned++;
         } else {
-            // Wait for last notes to clear then end
             const remaining = document.querySelectorAll('.rhythm-note');
             if (remaining.length === 0) {
                 endMeeting();
             }
         }
-    }, 1200); // 1.2s per note roughly
+    }, 1200);
+}
+
+// Wrapper for new MiniGames
+function startMiniGameMeeting() {
+    state.meetingActive = true;
+    els.meetingOverlay.classList.remove('hidden');
+    // Clear rhythm specific things if any
+    els.notesContainer.innerHTML = '';
+
+    // Inject MiniGame Container inside overlay
+    const container = document.createElement('div');
+    container.id = 'minigame-container';
+    container.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    `;
+    els.meetingOverlay.appendChild(container);
+
+    // Start Random Game
+    MiniGames.startRandom(container);
 }
 
 function spawnNote() {
     const note = document.createElement('div');
     note.className = 'rhythm-note';
-    // Start from right edge of track container (which is width of modal content basically)
-    // Actually track is 100% width of parent (600px - padding)
+    note.innerHTML = '👏'; // Clapping hands emoji
+    note.style.fontSize = '40px';
     note.style.left = '550px';
     els.notesContainer.appendChild(note);
 
@@ -1519,20 +1687,16 @@ function spawnNote() {
     function move() {
         if (!state.meetingActive || !note.parentNode) return;
 
-        pos -= noteSpeed;
+        pos -= 4; // Speed
         note.style.left = `${pos}px`;
 
-        // Miss condition (past target zone completely)
-        // Target zone is at 100px, width 60px. So finishes at 160px.
-        // Note width 40px.
-        // If note passes 100px (left side) significantly without hit.
-        if (pos < 80 && !note.dataset.hit && !note.dataset.missed) {
-            note.dataset.missed = true;
-            scoreRhythm('miss');
-            note.style.opacity = 0.5;
-            note.style.backgroundColor = '#ff5252';
+        // Check if missed (passed target zone)
+        if (pos < 60 && !note.dataset.hit && !note.dataset.missed) {
+            note.dataset.missed = 'true';
+            scoreRhythm('miss', note);
         }
 
+        // Remove when off-screen
         if (pos < -50) {
             note.remove();
             if (state.meetingNotesSpawned >= state.meetingMaxNotes && els.notesContainer.children.length === 0) {
@@ -1554,8 +1718,8 @@ function checkRhythmInput() {
 
     // Check for note in zone
     // Target Zone: 100px to 160px
-    // Note Center should be within this? 
-    // Let's use left position. 
+    // Note Center should be within this?
+    // Let's use left position.
     // Perfect: Note Left is approx 110px (center of zone aligns with center of note)
     // Note width 40, Target width 60.
     // Center of Target: 100 + 30 = 130.
@@ -1590,23 +1754,28 @@ function checkRhythmInput() {
 
 function scoreRhythm(rating, note) {
     els.meetingFeedback.classList.remove('hidden', 'perfect', 'good', 'miss');
-    void els.meetingFeedback.offsetWidth; // Trigger reflow
+    void els.meetingFeedback.offsetWidth;
     els.meetingFeedback.classList.add(rating);
 
     if (rating === 'perfect') {
         state.meetingScore += 2;
-        els.meetingFeedback.textContent = "TUYỆT VỜI!";
+        els.meetingFeedback.textContent = "👏 ĐÚNG NHỊP! 👏";
         els.comboStreak.textContent = parseInt(els.comboStreak.textContent) + 1;
         if (note) {
             note.dataset.hit = true;
             note.classList.add('hit');
             playSound('crit');
+            // Particle effect
+            if (typeof Effects !== 'undefined') {
+                const rect = note.getBoundingClientRect();
+                Effects.particleBurst(rect.left, rect.top, 8, '#4caf50');
+            }
         }
         els.targetZone.classList.add('hit');
         setTimeout(() => els.targetZone.classList.remove('hit'), 100);
     } else if (rating === 'good') {
         state.meetingScore += 1;
-        els.meetingFeedback.textContent = "ĐƯỢC!";
+        els.meetingFeedback.textContent = "👍 ỔN ĐẤY!";
         els.comboStreak.textContent = parseInt(els.comboStreak.textContent) + 1;
         if (note) {
             note.dataset.hit = true;
@@ -1617,25 +1786,101 @@ function scoreRhythm(rating, note) {
         setTimeout(() => els.targetZone.classList.remove('hit'), 100);
     } else {
         state.meetingScore -= 1;
-        els.meetingFeedback.textContent = "TRƯỢT!";
+        els.meetingFeedback.textContent = "😅 TRƯỢT RỒI!";
         els.comboStreak.textContent = "0";
         if (note) {
             note.dataset.missed = true;
-            note.style.backgroundColor = '#555';
+            note.style.opacity = '0.3';
         }
         els.targetZone.classList.add('miss');
         setTimeout(() => els.targetZone.classList.remove('miss'), 100);
         playSound('ui');
+
+        // Shake effect
+        if (typeof Effects !== 'undefined') {
+            Effects.shake(els.targetZone);
+        }
     }
 }
 
+function grind() {
+    // If Meeting is active, clicks might be for the minigame (if not handled by overlay)
+    // But usually overlay covers everything.
+
+    if (state.stress >= 100) {
+        // Trigger Meeting immediately if not active
+        if (!state.meetingActive) {
+            startMeeting();
+        }
+        return;
+    }
+
+    const amount = state.clickPower;
+    const isCrit = Math.random() < state.critChance;
+    const finalAmount = isCrit ? amount * state.critMultiplier : amount;
+
+    state.arrows += finalAmount;
+    state.totalClicks++;
+
+    // Enhanced visual feedback
+    animatePig();
+
+    if (typeof Effects !== 'undefined') {
+        if (isCrit) {
+            Effects.particleBurst(
+                window.innerWidth / 2,
+                window.innerHeight / 2,
+                16,
+                '#ffd700'
+            );
+            Effects.screenFlash('rgba(255, 215, 0, 0.3)', 150);
+        }
+    }
+
+    spawnFeedback(
+        window.innerWidth / 2,
+        window.innerHeight / 2 - 100,
+        finalAmount,
+        isCrit
+    );
+
+    playSound(isCrit ? 'crit' : 'grind');
+
+    // Stress increase
+    state.stress += 0.5;
+    updateStressUI();
+
+    updateUI();
+}
+
+// End Meeting Logic updated for MiniGames cleanup
 function endMeeting() {
     state.meetingActive = false;
     clearInterval(meetingInterval);
+
+    // Cleanup MiniGames DOM if exists updated
+    const mgContainer = document.getElementById('minigame-container');
+    if (mgContainer) mgContainer.remove();
+
     els.meetingOverlay.classList.add('hidden');
 
+    // Hide rhythm game elements
+    els.meetingFeedback.classList.add('hidden');
+    els.comboStreak.classList.add('hidden');
+    els.notesContainer.classList.add('hidden');
+    els.targetZone.classList.add('hidden');
+    els.comboLabel.classList.add('hidden');
+
+    // Calculate Reward based on Score (Unified for Rhythm and MiniGames)
+    // MiniGames usually return higher scores (e.g. 150), Rhythm max is 20.
+    // Normalize: Rhythm Pass > 5. MiniGame Pass > 50.
+
+    let isSuccess = false;
+    if (state.meetingScore > 50) isSuccess = true; // Minigame threshold
+    else if (state.meetingScore > 5 && state.meetingScore <= 20) isSuccess = true; // Rhythm threshold
+
     // Rewards
-    if (state.meetingScore > 5) {
+    if (isSuccess) {
         // Success
         state.arrows += 100;
         relieveStress(30);
@@ -1646,6 +1891,10 @@ function endMeeting() {
             true
         );
         playSound('fanfare');
+        if (typeof Effects !== 'undefined') {
+            Effects.showSuccess("THƯỞNG GIAO BAN!", window.innerWidth / 2, window.innerHeight / 2 - 100);
+            Effects.screenFlash('#4caf50', 200);
+        }
     } else {
         // Failure
         state.stress += 20;
@@ -1657,9 +1906,47 @@ function endMeeting() {
             false
         );
         playSound('ui');
+        if (typeof Effects !== 'undefined') {
+            Effects.showError("BỊ TRỪ LƯƠNG!", els.pig);
+        }
     }
     updateUI();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Systems
+    if (typeof LivingWorld !== 'undefined') LivingWorld.init();
+
+    // DEBUG: Add Manual Meeting Button for Testing
+    const testBtn = document.createElement('button');
+    testBtn.textContent = "🚨 HỌP KHẨN CẤP (TEST)";
+    testBtn.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        z-index: 9999;
+        background: #d32f2f;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        opacity: 0.7;
+    `;
+    testBtn.addEventListener('click', () => {
+        state.stress = 100; // Force full stress
+        updateStressUI();
+        startMeeting();
+    });
+    testBtn.addEventListener('mouseenter', () => testBtn.style.opacity = '1');
+    testBtn.addEventListener('mouseleave', () => testBtn.style.opacity = '0.7');
+    document.body.appendChild(testBtn);
+
+    // Init UI
+    updateUI();
+    updateTime();
+});
 
 // Intro Logic
 const introScreen = document.getElementById('intro-screen');
